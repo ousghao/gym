@@ -108,18 +108,13 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>{t('modals.add_client.title')}</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>{t('modals.add_client.title')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('forms.basic_information')}</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-4">{t('forms.basic_information')}</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">{t('forms.full_name')} *</Label>
@@ -234,7 +229,7 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
               <div>
                 <Label>{t('forms.limitations')}</Label>
                 <Textarea
-                  value={formData.limitations}
+                  value={formData.limitations || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, limitations: e.target.value }))}
                   placeholder="Any injuries, medical conditions, or limitations to consider..."
                   rows={3}

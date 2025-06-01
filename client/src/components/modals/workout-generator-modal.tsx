@@ -106,19 +106,14 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Bot className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <DialogTitle>{t('modals.workout_generator.title')}</DialogTitle>
-                <p className="text-sm text-slate-600">{t('modals.workout_generator.subtitle')}</p>
-              </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <Bot className="h-5 w-5 text-white" />
             </div>
-            <Button variant="ghost" size="sm" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div>
+              <DialogTitle>{t('modals.workout_generator.title')}</DialogTitle>
+              <p className="text-sm text-muted-foreground">{t('modals.workout_generator.subtitle')}</p>
+            </div>
           </div>
         </DialogHeader>
 

@@ -70,15 +70,10 @@ export function ReportsModal({ open, onClose }: ReportsModalProps) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              {t('actions.view_reports')}
-            </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            {t('actions.view_reports')}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
