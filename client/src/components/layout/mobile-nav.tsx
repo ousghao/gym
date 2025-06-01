@@ -12,14 +12,16 @@ export function MobileNav({ currentView, onViewChange, onQuickLog }: MobileNavPr
   const { t } = useLanguage();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40">
-      <div className="flex justify-around py-2">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border z-50">
+      <div className="flex justify-around py-2 px-4 safe-area-bottom">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => onViewChange('dashboard')}
           className={`flex flex-col items-center p-2 h-auto ${
-            currentView === 'dashboard' ? 'text-primary' : 'text-slate-500'
+            currentView === 'dashboard' 
+              ? 'text-primary bg-primary/10' 
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <BarChart3 className="h-5 w-5" />
@@ -30,7 +32,9 @@ export function MobileNav({ currentView, onViewChange, onQuickLog }: MobileNavPr
           size="sm"
           onClick={() => onViewChange('clients')}
           className={`flex flex-col items-center p-2 h-auto ${
-            currentView === 'clients' ? 'text-primary' : 'text-slate-500'
+            currentView === 'clients' 
+              ? 'text-primary bg-primary/10' 
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <Users className="h-5 w-5" />
@@ -41,7 +45,9 @@ export function MobileNav({ currentView, onViewChange, onQuickLog }: MobileNavPr
           size="sm"
           onClick={() => onViewChange('calendar')}
           className={`flex flex-col items-center p-2 h-auto ${
-            currentView === 'calendar' ? 'text-primary' : 'text-slate-500'
+            currentView === 'calendar' 
+              ? 'text-primary bg-primary/10' 
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <Calendar className="h-5 w-5" />
@@ -51,10 +57,10 @@ export function MobileNav({ currentView, onViewChange, onQuickLog }: MobileNavPr
           variant="ghost"
           size="sm"
           onClick={onQuickLog}
-          className="flex flex-col items-center p-2 h-auto text-slate-500"
+          className="flex flex-col items-center p-2 h-auto bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-5 w-5" />
-          <span className="text-xs mt-1">{t('nav.quick_log')}</span>
+          <span className="text-xs mt-1">Log</span>
         </Button>
       </div>
     </div>

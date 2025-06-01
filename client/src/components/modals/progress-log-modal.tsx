@@ -185,7 +185,7 @@ export function ProgressLogModal({ open, onClose, preSelectedClientId }: Progres
             <Label htmlFor="notes">Notes</Label>
             <Input
               id="notes"
-              value={formData.notes}
+              value={formData.notes || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Optional notes..."
             />

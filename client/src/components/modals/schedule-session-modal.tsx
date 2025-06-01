@@ -187,7 +187,7 @@ export function ScheduleSessionModal({ open, onClose, preSelectedClientId, preSe
               <Input
                 id="endTime"
                 type="time"
-                value={formData.endTime}
+                value={formData.endTime || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
               />
             </div>
@@ -197,7 +197,7 @@ export function ScheduleSessionModal({ open, onClose, preSelectedClientId, preSe
             <Label htmlFor="notes">Notes</Label>
             <Input
               id="notes"
-              value={formData.notes}
+              value={formData.notes || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Optional session notes..."
             />
