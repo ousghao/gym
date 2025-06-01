@@ -14,6 +14,9 @@ import { Calendar } from "@/pages/calendar";
 import { AddClientModal } from "@/components/modals/add-client-modal";
 import { ClientDetailModal } from "@/components/modals/client-detail-modal";
 import { WorkoutGeneratorModal } from "@/components/modals/workout-generator-modal";
+import { ProgressLogModal } from "@/components/modals/progress-log-modal";
+import { ScheduleSessionModal } from "@/components/modals/schedule-session-modal";
+import { ReportsModal } from "@/components/modals/reports-modal";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +24,9 @@ function Router() {
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [isClientDetailModalOpen, setIsClientDetailModalOpen] = useState(false);
   const [isWorkoutGeneratorModalOpen, setIsWorkoutGeneratorModalOpen] = useState(false);
+  const [isProgressLogModalOpen, setIsProgressLogModalOpen] = useState(false);
+  const [isScheduleSessionModalOpen, setIsScheduleSessionModalOpen] = useState(false);
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [preSelectedClientId, setPreSelectedClientId] = useState<number | undefined>(undefined);
 
@@ -43,28 +49,24 @@ function Router() {
   };
 
   const handleLogProgress = () => {
-    console.log('Log progress clicked');
-    // TODO: Implement progress logging modal
+    setIsProgressLogModalOpen(true);
   };
 
   const handleScheduleSession = () => {
-    console.log('Schedule session clicked');
-    // TODO: Implement session scheduling modal
+    setIsScheduleSessionModalOpen(true);
   };
 
   const handleViewReports = () => {
-    console.log('View reports clicked');
-    // TODO: Implement reports view
+    setIsReportsModalOpen(true);
   };
 
   const handleQuickLog = () => {
-    console.log('Quick log clicked');
-    // TODO: Implement quick logging modal
+    setIsProgressLogModalOpen(true);
   };
 
   const handleLogWorkout = (clientId: number) => {
-    console.log('Log workout for client:', clientId);
-    // TODO: Implement workout logging modal
+    setPreSelectedClientId(clientId);
+    setIsProgressLogModalOpen(true);
   };
 
   const renderCurrentView = () => {
@@ -132,6 +134,25 @@ function Router() {
           setPreSelectedClientId(undefined);
         }}
         preSelectedClientId={preSelectedClientId}
+      />
+
+      <ProgressLogModal
+        open={isProgressLogModalOpen}
+        onClose={() => {
+          setIsProgressLogModalOpen(false);
+          setPreSelectedClientId(undefined);
+        }}
+        preSelectedClientId={preSelectedClientId}
+      />
+
+      <ScheduleSessionModal
+        open={isScheduleSessionModalOpen}
+        onClose={() => setIsScheduleSessionModalOpen(false)}
+      />
+
+      <ReportsModal
+        open={isReportsModalOpen}
+        onClose={() => setIsReportsModalOpen(false)}
       />
     </div>
   );
