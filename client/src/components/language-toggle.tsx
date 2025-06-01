@@ -14,7 +14,7 @@ export function LanguageToggle() {
       variant="outline"
       size="sm"
       onClick={toggleLanguage}
-      className="fixed top-4 right-4 z-50 bg-white shadow-lg hover:bg-slate-50"
+      className="bg-background hover:bg-accent"
     >
       <Globe className="h-4 w-4 mr-2" />
       {language.toUpperCase()} / {language === 'en' ? 'ES' : 'EN'}

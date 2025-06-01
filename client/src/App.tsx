@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/hooks/use-language";
-import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeProvider } from "@/hooks/use-theme";
 import { Navigation } from "@/components/layout/navigation";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Dashboard } from "@/pages/dashboard";
@@ -93,15 +93,13 @@ function Router() {
 
   return (
     <div className="min-h-screen bg-background">
-      <LanguageToggle />
-      
       <Navigation
         currentView={currentView}
         onViewChange={handleViewChange}
         onAddClient={handleAddClient}
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 lg:pb-6">
         {renderCurrentView()}
       </main>
 
@@ -142,15 +140,17 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Switch>
-            <Route path="/" component={Router} />
-            <Route component={NotFound} />
-          </Switch>
-        </TooltipProvider>
-      </LanguageProvider>
+      <ThemeProvider defaultTheme="light" storageKey="gym-coach-theme">
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Switch>
+              <Route path="/" component={Router} />
+              <Route component={NotFound} />
+            </Switch>
+          </TooltipProvider>
+        </LanguageProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

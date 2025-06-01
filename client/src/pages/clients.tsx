@@ -29,7 +29,7 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
 
   const filteredClients = clients?.filter((client: Client) => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGoal = !goalFilter || client.goal === goalFilter;
+    const matchesGoal = !goalFilter || goalFilter === 'all' || client.goal === goalFilter;
     return matchesSearch && matchesGoal;
   }) || [];
 
@@ -65,7 +65,7 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
                   <SelectValue placeholder="All Goals" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('All Goals')}</SelectItem>
+                  <SelectItem value="all">All Goals</SelectItem>
                   <SelectItem value="weight_loss">{t('goals.weight_loss')}</SelectItem>
                   <SelectItem value="muscle_gain">{t('goals.muscle_gain')}</SelectItem>
                   <SelectItem value="endurance">{t('goals.endurance')}</SelectItem>
