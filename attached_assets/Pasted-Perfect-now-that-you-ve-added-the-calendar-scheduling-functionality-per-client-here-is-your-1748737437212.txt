@@ -1,0 +1,171 @@
+Perfect — now that you've added the **calendar & scheduling functionality per client**, here is your **updated, full MVP (Minimum Viable Product)** in both **English and Spanish**, without any folder structure, and fully aligned with everything you and Rolando agreed on.
+
+---
+
+## ✅ FULL MVP – "Asistente de Rutinas"
+
+**Bilingual AI-powered assistant for gym coaches**
+**With calendar, client tracking, and workout generation using Gemini API**
+
+---
+
+## 🔷 General Overview
+
+### **English:**
+
+A bilingual (English/Spanish) web app designed for personal trainers to manage their in-person clients, generate personalized weekly workout plans using Gemini Pro AI, track progress (weights/reps), and schedule sessions using an integrated calendar system.
+
+### **Español:**
+
+Aplicación web bilingüe (inglés/español) diseñada para entrenadores personales, para gestionar a sus clientes presenciales, generar rutinas semanales personalizadas con IA Gemini, registrar progresos (pesos/repeticiones) y agendar sesiones mediante un calendario integrado.
+
+---
+
+## 🔷 Supported Languages
+
+* ✅ Spanish 🇪🇸
+* ✅ English 🇬🇧
+* Language switch manually by the trainer (toggle in the interface)
+
+---
+
+## 🔷 Core Functional Modules
+
+### 1. 👤 **Client Management**
+
+* Create/edit/delete clients
+* Each client has:
+
+  * Name, age, weight, height
+  * Goal (e.g. fat loss, muscle gain)
+  * Experience level (beginner/intermediate/advanced)
+  * Days available
+  * Equipment available
+  * Physical limitations (optional)
+* Trainer can access full details per client
+
+---
+
+### 2. 🤖 **Weekly Workout Generator (Gemini Pro API)**
+
+* Button: "Generate Weekly Plan"
+* AI creates a 7-day plan:
+
+  * Each day includes warm-up, main workout (sets/reps), stretching
+  * Routine is stored in client profile
+* Regenerate option if needed
+* Output shown in trainer’s selected language
+
+---
+
+### 3. 📋 **Workout Progress Tracking**
+
+* Log for each exercise:
+
+  * Weight used
+  * Reps completed
+  * Date
+* Stored under client profile
+* Historical view per exercise
+* System suggests: maintain / increase weight
+
+---
+
+### 4. 📅 **Calendar & Scheduling System**
+
+* **Per-client calendar view**:
+
+  * Displays their workout days and past entries
+  * Editable by trainer
+* **Global calendar (for trainer)**:
+
+  * View daily/weekly schedule of:
+
+    * Client sessions
+    * Personal workout time
+    * Tasks or reminders
+* Add/edit/delete events
+* Drag-and-drop support optional (future)
+
+---
+
+### 5. 💻 **Trainer Dashboard**
+
+* Overview of all clients
+* Search, filter (by goal, day, etc.)
+* Daily summary:
+
+  * Who’s training today
+  * Direct access to today’s workouts
+* Quick buttons:
+
+  * Log weight/reps
+  * Generate new routine
+  * View training history
+  * Access client calendar
+
+---
+
+### 6. 📱 **Mobile-Optimized Interface**
+
+* Designed mobile-first
+* Easy navigation
+* Tap to open routines or calendars
+* Quick entry for weight & reps
+* Works in browser (no app installation needed)
+
+---
+
+## 🔷 Technical Requirements
+
+| Feature               | Tech/Tool                        |
+| --------------------- | -------------------------------- |
+| AI workout generation | Gemini Pro API (Google AI)       |
+| Database              | Supabase or Firebase             |
+| Calendar system       | FullCalendar.js or custom        |
+| Multilingual UI       | JSON-based i18n or i18next       |
+| Frontend              | HTML/CSS/JS (or React, optional) |
+| Hosting               | Replit (for demo), Vercel later  |
+
+---
+
+## 🔷 Admin-Level Features
+
+* All data stored securely
+* No login required for MVP (can be added later)
+* Only the trainer has access to data
+* In the future: export client logs, PDF reports, voice input, reminders
+
+---
+
+## 🔷 MVP Goals (Deliverable Scope)
+
+| Feature                                  | Status     |
+| ---------------------------------------- | ---------- |
+| Bilingual UI (EN/ES)                     | ✅ Included |
+| Client creation + editing                | ✅ Included |
+| Gemini-based plan generation             | ✅ Included |
+| Weekly routine storage per client        | ✅ Included |
+| Log weight/reps and view history         | ✅ Included |
+| Suggest weight progression (basic logic) | ✅ Included |
+| Calendar per client                      | ✅ Included |
+| Global calendar for trainer scheduling   | ✅ Included |
+| Responsive mobile-first design           | ✅ Included |
+
+---
+
+## 🎯 Summary
+
+You're building a **smart, mobile-friendly gym coaching system** where:
+
+* The trainer can manage all clients easily
+* Each client has a personalized plan and history
+* Scheduling is clear and accessible
+* Everything is bilingual and AI-powered
+* Works from the trainer’s phone without any app install
+
+This MVP gives Rolando (and any future trainer) **everything needed to run his gym coaching digitally and efficiently** — and it’s fully scalable.
+
+---
+
+Let me know if you want this as a **PDF or Notion page** to send to Replit or use for presentation. I can also create a **starter language file or interface mockup**.
