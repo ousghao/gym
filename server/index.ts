@@ -71,17 +71,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 if (app.get("env") === "development") {
   await setupVite(app, httpServer);
 } else {
-  // Serve static files ONLY from a specific directory
-  app.use(express.static('dist/public'));
-  
-  // Important: Don't add catch-all here if you have API routes
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve('dist/public', 'index.html'));
-  });
+  serveStatic(app);
 }
 
-// ✅ Correct usage of httpServer
+// Server startup with explicit health check logging
 const port = parseInt(process.env.PORT || '5000', 10);
 httpServer.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${port}`);
+  console.log(`✅ Health check available at http://0.0.0.0:${port}/health`);
 });
