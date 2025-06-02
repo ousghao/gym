@@ -4,7 +4,6 @@ import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from './vite.js';
 import { DbStorage } from './db-storage.js';
 import { createServer } from 'http';
-import path from 'path';
 
 const app = express();
 const httpServer = createServer(app);
@@ -41,23 +40,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check endpoint (MUST come first)
-app.get('/health', (_req, res) => {
-  res.status(200).send('OK');
-});
-
-// Root route for general visibility
-app.get('/', (_req, res) => {
-  res.send('✅ API is up and running');
-});
-
 // Routes
-try {
-  await registerRoutes(app, storage);
-} catch (err) {
-  console.error('FATAL STARTUP ERROR:', err);
-  process.exit(1);
-}
+await registerRoutes(app, storage);
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -74,9 +58,8 @@ if (app.get("env") === "development") {
   serveStatic(app);
 }
 
-// Server startup with explicit health check logging
+// ✅ Correct usage of httpServer
 const port = parseInt(process.env.PORT || '5000', 10);
 httpServer.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${port}`);
-  console.log(`✅ Health check available at http://0.0.0.0:${port}/health`);
 });

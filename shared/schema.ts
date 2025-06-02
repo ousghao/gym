@@ -53,46 +53,29 @@ export const exerciseProgress = pgTable("exercise_progress", {
   date: timestamp("date").defaultNow().notNull(),
 });
 
-export const insertClientSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  goal: z.string(),
-  experience: z.string(),
-  availableDays: z.array(z.string()),
-  equipment: z.string(),
-  limitations: z.string().optional(),
+export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertWorkoutPlanSchema = z.object({
-  clientId: z.number(),
-  name: z.string(),
-  description: z.string(),
-  duration: z.string(),
-  focus: z.string(),
-  plan: z.any(), // This will be validated by the AI response
-  isActive: z.boolean(),
+export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans).omit({
+  id: true,
+  createdAt: true,
 });
 
-export const insertSessionSchema = z.object({
-  clientId: z.number(),
-  date: z.string(),
-  notes: z.string().optional(),
-  exercises: z.array(z.object({
-    name: z.string(),
-    sets: z.number(),
-    reps: z.string(),
-    weight: z.number().optional(),
-  })),
+export const insertSessionSchema = createInsertSchema(sessions).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  date: z.preprocess((arg) => {
+    if (typeof arg === 'string' || arg instanceof Date) return new Date(arg);
+    return arg;
+  }, z.date()),
 });
 
-export const insertExerciseProgressSchema = z.object({
-  clientId: z.number(),
-  exerciseName: z.string(),
-  date: z.string(),
-  weight: z.number(),
-  reps: z.number(),
-  notes: z.string().optional(),
+export const insertExerciseProgressSchema = createInsertSchema(exerciseProgress).omit({
+  id: true,
+  date: true,
 });
 
 export type Client = typeof clients.$inferSelect;
