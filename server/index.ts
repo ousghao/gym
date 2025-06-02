@@ -3,6 +3,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from './vite.js';
 import { DbStorage } from './db-storage.js';
+// Static or Vite middleware
+import { createServer } from "http";
 
 const app = express();
 const storage = new DbStorage();
@@ -54,13 +56,16 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error("Unhandled error:", err);
 });
 
-// Static or Vite middleware
+
+// ...other imports...
+
+const httpServer = createServer(app);
+
 if (app.get("env") === "development") {
-  await setupVite(app);
+  await setupVite(app, httpServer);
 } else {
   serveStatic(app);
 }
-
 // Start the server
 const port = parseInt(process.env.PORT || '5000', 10);
 app.listen(port, '0.0.0.0', () => {
