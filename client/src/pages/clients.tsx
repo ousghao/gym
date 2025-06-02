@@ -4,12 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/hooks/use-language';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientApi } from '@/lib/api';
 import { ClientCard } from '@/components/client-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Users, Plus } from 'lucide-react';
 import type { Client } from '@shared/schema';
+import { AddClientModal } from '@/components/modals/add-client-modal';
+import { ClientDetailModal } from '@/components/modals/client-detail-modal';
+import { useToast } from '@/hooks/use-toast';
 
 interface ClientsProps {
   onViewClient: (clientId: number) => void;
@@ -19,13 +22,51 @@ interface ClientsProps {
 
 export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: ClientsProps) {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [goalFilter, setGoalFilter] = useState('');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editClient, setEditClient] = useState<Client | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailClient, setDetailClient] = useState<Client | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: clients, isLoading, error } = useQuery({
     queryKey: ['/api/clients'],
     queryFn: clientApi.getAll,
   });
+
+  const deleteClientMutation = useMutation({
+    mutationFn: (id: number) => clientApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      toast({ title: 'Success', description: 'Client deleted successfully' });
+      console.log('Client deleted successfully');
+    },
+    onError: (error) => {
+      toast({ title: 'Error', description: 'Failed to delete client', variant: 'destructive' });
+      console.error('Failed to delete client', error);
+    },
+  });
+
+  const handleEdit = (clientId: number) => {
+    const client = clients?.find((c: Client) => c.id === clientId) || null;
+    setEditClient(client);
+    setEditModalOpen(true);
+  };
+
+  const handleView = (clientId: number) => {
+    const client = clients?.find((c: Client) => c.id === clientId) || null;
+    setDetailClient(client);
+    setDetailModalOpen(true);
+  };
+
+  const handleDelete = (clientId: number) => {
+    if (window.confirm('Are you sure you want to delete this client?')) {
+      deleteClientMutation.mutate(clientId);
+    }
+  };
 
   const filteredClients = clients?.filter((client: Client) => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -109,9 +150,11 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
             <ClientCard
               key={client.id}
               client={client}
-              onView={onViewClient}
+              onView={handleView}
+              onEdit={handleEdit}
               onGenerateWorkout={onGenerateWorkout}
               onLogWorkout={onLogWorkout}
+              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -122,7 +165,7 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
               <Users className="h-16 w-16 mx-auto text-slate-400 mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">No clients yet</h3>
               <p className="text-slate-600 mb-6">Get started by adding your first client</p>
-              <Button>
+              <Button onClick={() => setAddModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('actions.add_client')}
               </Button>
@@ -143,6 +186,23 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
           Showing {filteredClients.length} of {clients.length} clients
         </div>
       )}
+
+      <ClientDetailModal
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        clientId={detailClient?.id || null}
+        onGenerateWorkout={onGenerateWorkout}
+      />
+      <AddClientModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+      />
+      <AddClientModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        client={editClient || undefined}
+        isEdit={true}
+      />
     </div>
   );
 }

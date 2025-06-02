@@ -3,10 +3,12 @@ import { translations, TranslationKey } from '@/lib/translations';
 
 type Language = 'en' | 'es';
 
+type Translations = { [key: string]: string };
+
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -26,8 +28,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('gym-coach-language', lang);
   };
 
-  const t = (key: TranslationKey, params?: Record<string, string | number>) => {
-    let translation = translations[language][key] || translations.en[key] || key;
+  const t = (key: string, params?: Record<string, string | number>) => {
+    const langTranslations = translations[language] as Translations;
+    const enTranslations = translations.en as Translations;
+    let translation = langTranslations[key] || enTranslations[key] || key;
     
     if (params) {
       Object.entries(params).forEach(([param, value]) => {

@@ -50,9 +50,13 @@ export const workoutPlanApi = {
     return response.json();
   },
 
-  generateAI: async (data: { clientId: number; duration: string; focus: string }): Promise<WorkoutPlan> => {
+  generateAI: async (data: { clientId: number; duration: string; focus: string; language?: string }): Promise<WorkoutPlan> => {
     const response = await apiRequest('POST', '/api/workout-plans/generate', data);
     return response.json();
+  },
+
+  delete: async (planId: number): Promise<void> => {
+    await apiRequest('DELETE', `/api/workout-plans/${planId}`);
   },
 };
 
@@ -77,6 +81,10 @@ export const sessionApi = {
   update: async (id: number, session: Partial<InsertSession>): Promise<Session> => {
     const response = await apiRequest('PATCH', `/api/sessions/${id}`, session);
     return response.json();
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiRequest('DELETE', `/api/sessions/${id}`);
   },
 };
 

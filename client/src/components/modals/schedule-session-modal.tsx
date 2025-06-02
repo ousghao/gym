@@ -98,10 +98,12 @@ export function ScheduleSessionModal({ open, onClose, preSelectedClientId, preSe
       return;
     }
 
-    scheduleSessionMutation.mutate({
+    const payload = {
       ...formData,
       date: selectedDate,
-    } as InsertSession);
+    };
+    console.log('Scheduling session payload:', payload);
+    scheduleSessionMutation.mutate(payload);
   };
 
   const handleClose = () => {

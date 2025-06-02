@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,9 +16,11 @@ import { X } from 'lucide-react';
 interface AddClientModalProps {
   open: boolean;
   onClose: () => void;
+  client?: Partial<InsertClient> & { id?: number };
+  isEdit?: boolean;
 }
 
-export function AddClientModal({ open, onClose }: AddClientModalProps) {
+export function AddClientModal({ open, onClose, client, isEdit }: AddClientModalProps) {
   const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -35,22 +37,50 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
     limitations: '',
   });
 
+  useEffect(() => {
+    if (client && isEdit) {
+      setFormData({ ...client });
+    } else {
+      resetForm();
+    }
+  }, [client, isEdit, open]);
+
   const createClientMutation = useMutation({
     mutationFn: clientApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
       toast({
-        title: "Success",
-        description: "Client created successfully",
+        title: 'Success',
+        description: 'Client created successfully',
       });
       onClose();
       resetForm();
     },
     onError: () => {
       toast({
-        title: "Error",
-        description: "Failed to create client",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to create client',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateClientMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<InsertClient> }) => clientApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/clients'] });
+      toast({
+        title: 'Success',
+        description: 'Client updated successfully',
+      });
+      onClose();
+      resetForm();
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update client',
+        variant: 'destructive',
       });
     },
   });
@@ -71,18 +101,26 @@ export function AddClientModal({ open, onClose }: AddClientModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.age || !formData.weight || !formData.height || 
-        !formData.goal || !formData.experience || !formData.availableDays?.length) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
+    if (isEdit && client && client.id) {
+      const updatedFields: Partial<InsertClient> = {};
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0)) {
+          updatedFields[key as keyof InsertClient] = value as any;
+        }
       });
-      return;
+      updateClientMutation.mutate({ id: client.id, data: updatedFields });
+    } else {
+      if (!formData.name || !formData.age || !formData.weight || !formData.height || 
+          !formData.goal || !formData.experience || !formData.availableDays?.length) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please fill in all required fields',
+          variant: 'destructive',
+        });
+        return;
+      }
+      createClientMutation.mutate(formData as InsertClient);
     }
-
-    createClientMutation.mutate(formData as InsertClient);
   };
 
   const handleDayToggle = (day: string, checked: boolean) => {

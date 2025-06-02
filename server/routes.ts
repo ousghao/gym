@@ -1,10 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { type IStorage } from "./storage.js";
 import { insertClientSchema, insertWorkoutPlanSchema, insertSessionSchema, insertExerciseProgressSchema } from "@shared/schema";
 import { z } from "zod";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { DbStorage } from './db-storage.js';
+import { MemStorage } from './storage.js';
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, storage: IStorage): Promise<Server> {
+  const server = createServer(app);
   
   // Client routes
   app.get("/api/clients", async (req, res) => {
@@ -62,12 +66,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/clients/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      console.log(`[DELETE] /api/clients/${id}`);
+      // Manual cascade: delete sessions and workout plans for this client
+      await storage.getSessions(id).then(async (sessions) => {
+        for (const session of sessions) {
+          await storage.deleteSession(session.id);
+        }
+      });
+      await storage.getWorkoutPlans(id).then(async (plans) => {
+        for (const plan of plans) {
+          await storage.deleteWorkoutPlan(plan.id);
+        }
+      });
       const deleted = await storage.deleteClient(id);
+      console.log(`Delete result for client ${id}:`, deleted);
       if (!deleted) {
         return res.status(404).json({ message: "Client not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error('Error deleting client:', error);
       res.status(500).json({ message: "Failed to delete client" });
     }
   });
@@ -96,137 +114,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  function fixGeminiJson(raw: string): string {
+    // Remove code block markers and trim
+    let cleaned = raw.replace(/```json|```/gi, '').trim();
+    // Remove leading/trailing whitespace/newlines
+    cleaned = cleaned.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
+    // Fix unquoted reps: "reps": 8-12, or "reps": 10-12 per leg, or "reps": 15-20
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*per\s*leg)?),/g, (match, p1) => `"reps": "${p1}",`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*per\s*leg)?)\n/g, (match, p1) => `"reps": "${p1}"\n`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*per\s*leg)?)\s*}/g, (match, p1) => `"reps": "${p1}"}`);
+    return cleaned;
+  }
+
   // Generate workout plan with Gemini AI
   app.post("/api/workout-plans/generate", async (req, res) => {
     try {
-      const { clientId, duration, focus } = req.body;
-      
+      const { clientId, duration, focus, language } = req.body;
       if (!clientId) {
         return res.status(400).json({ message: "Client ID is required" });
       }
-
       const client = await storage.getClient(clientId);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
       }
-
       // Get Gemini API key from environment
       const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_STUDIO_API_KEY || process.env.GOOGLE_API_KEY;
-      
       if (!apiKey) {
         return res.status(500).json({ message: "Gemini API key not configured" });
       }
-
-      // Prepare the prompt for Gemini
-      const prompt = `Create a detailed ${duration.replace('_', ' ')} workout plan for a gym client with the following profile:
-
-Name: ${client.name}
-Age: ${client.age}
-Goal: ${client.goal.replace('_', ' ')}
-Experience Level: ${client.experience}
-Available Days: ${client.availableDays.join(', ')}
-Equipment: ${client.equipment.replace('_', ' ')}
-Limitations: ${client.limitations || 'None'}
-Focus: ${focus.replace('_', ' ')}
-
-Please provide a structured workout plan in JSON format with the following structure:
-{
-  "overview": "Brief description of the plan",
-  "days": [
-    {
-      "day": "Monday",
-      "type": "Upper Body",
-      "duration": 45,
-      "exercises": [
-        {
-          "name": "Exercise name",
-          "sets": 3,
-          "reps": "10-12",
-          "weight": "bodyweight or suggested weight",
-          "notes": "Form tips or modifications"
+      // Use the @google/generative-ai SDK
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      // Use a dynamic, structured JSON prompt based on client and user choices
+      const durationText = duration === '1_week' ? '7 days' : duration === '2_weeks' ? '15 days' : '30 days';
+      const focusText = focus.replace('_', ' ');
+      const availableDays = Array.isArray(client.availableDays) ? client.availableDays.join(', ') : client.availableDays;
+      const langInstruction = language === 'es' ? '\nRespond strictly in Spanish.' : '';
+      const prompt = `Create a personalized gym workout plan for the following client in strict JSON format.\n\nClient details:\n- Goal: ${client.goal}\n- Experience: ${client.experience}\n- Available Days: ${availableDays}\n- Equipment: ${client.equipment}\n- Limitations: ${client.limitations || 'None'}\n\nPlan requirements:\n- Duration: ${durationText}\n- Focus: ${focusText}\n- Return an array where each item represents one day.\n- Each day should include a name (Day 1, Day 2, ...), the focus (e.g. Legs, Chest, Core...), and 3 to 5 exercises.\n- Each exercise should contain name, sets, and reps.\n- Do not include any introduction or extra text. Respond only with valid JSON.${langInstruction}`;
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 800,
+          temperature: 0.7,
+          topP: 0.8,
+          candidateCount: 1
         }
-      ]
-    }
-  ],
-  "progressionNotes": "How to progress over time",
-  "safetyTips": "Important safety considerations"
-}
-
-Make sure the plan is appropriate for their experience level, respects their limitations, and uses their available equipment. Focus on ${focus} while maintaining a balanced approach.`;
-
-      // Call Gemini API
+      });
+      const text = await result.response.text();
+      let planJson: any = {};
       try {
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: prompt
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 2048,
-            }
-          })
-        });
-
-        if (!geminiResponse.ok) {
-          throw new Error(`Gemini API error: ${geminiResponse.status}`);
-        }
-
-        const geminiData = await geminiResponse.json();
-        const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!generatedText) {
-          throw new Error("No content generated by Gemini");
-        }
-
-        // Try to parse the JSON from the generated text
-        let workoutPlan;
-        try {
-          // Extract JSON from the response (Gemini might wrap it in markdown)
-          const jsonMatch = generatedText.match(/```json\n([\s\S]*?)\n```/) || generatedText.match(/\{[\s\S]*\}/);
-          const jsonString = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : generatedText;
-          workoutPlan = JSON.parse(jsonString);
-        } catch (parseError) {
-          // If JSON parsing fails, create a structured plan from the text
-          workoutPlan = {
-            overview: `AI-generated ${duration.replace('_', ' ')} plan focusing on ${focus.replace('_', ' ')}`,
-            generatedText: generatedText,
-            days: [], // We'll populate this based on available days
-            progressionNotes: "Follow the guidance provided and adjust weights/reps as you progress",
-            safetyTips: "Always warm up before exercising and listen to your body"
-          };
-        }
-
-        // Create and save the workout plan
-        const planData = {
-          clientId,
-          name: `${focus.replace('_', ' ')} Plan - ${new Date().toLocaleDateString()}`,
-          description: workoutPlan.overview || `AI-generated workout plan for ${client.name}`,
-          duration,
-          focus,
-          plan: workoutPlan,
-          isActive: true,
-        };
-
-        const savedPlan = await storage.createWorkoutPlan(planData);
-        res.status(201).json(savedPlan);
-
-      } catch (apiError) {
-        console.error("Gemini API error:", apiError);
-        res.status(500).json({ message: "Failed to generate workout plan with AI", error: apiError.message });
+        let cleaned = fixGeminiJson(text);
+        planJson = JSON.parse(cleaned);
+      } catch (e) {
+        console.error('Failed to parse Gemini response:', text);
+        planJson = { error: 'Failed to parse Gemini response as JSON', raw: text };
       }
-
-    } catch (error) {
-      console.error("Generate workout plan error:", error);
-      res.status(500).json({ message: "Failed to generate workout plan" });
+      // Compose InsertWorkoutPlan
+      const planData = {
+        clientId,
+        name: `AI Plan for ${client.name}`,
+        description: `AI-generated plan (${duration}, ${focus})`,
+        duration: duration || '1_week',
+        focus: focus || 'balanced',
+        plan: planJson,
+        isActive: true,
+      };
+      const savedPlan = await storage.createWorkoutPlan(planData);
+      res.status(201).json(savedPlan);
+    } catch (error: any) {
+      res.status(500).json({ message: `Gemini API error: ${error?.message || error}` });
     }
   });
 
@@ -272,6 +228,19 @@ Make sure the plan is appropriate for their experience level, respects their lim
     }
   });
 
+  app.delete("/api/sessions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteSession(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete session" });
+    }
+  });
+
   // Progress tracking routes
   app.get("/api/progress", async (req, res) => {
     try {
@@ -311,17 +280,52 @@ Make sure the plan is appropriate for their experience level, respects their lim
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
       const clients = await storage.getClients();
-      const today = new Date().toISOString().split('T')[0];
-      const todaySessions = await storage.getSessions(undefined, today);
-      
+      const plans = await storage.getWorkoutPlans();
+      const sessions = await storage.getSessions();
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      // Sessions today
+      const sessionsToday = sessions.filter(s => {
+        const sessionDate = new Date(s.date).toISOString().split('T')[0];
+        return sessionDate === todayStr;
+      });
+      // Sessions this week
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      const sessionsThisWeek = sessions.filter(s => {
+        const d = new Date(s.date);
+        return d >= startOfWeek && d <= endOfWeek;
+      });
+      // AI plans generated (name or description contains 'AI')
+      const aiPlansGenerated = plans.filter(p => (p.name && p.name.toLowerCase().includes('ai')) || (p.description && p.description.toLowerCase().includes('ai'))).length;
+      // Average progress (mean improvement across all clients)
+      let avgProgress = 0;
+      let progressCount = 0;
+      for (const client of clients) {
+        const summary = await storage.getProgressSummary(client.id);
+        if (summary && typeof summary === 'object') {
+          for (const exercise in summary) {
+            const improvement = summary[exercise]?.improvement;
+            if (improvement && typeof improvement.weight === 'number') {
+              avgProgress += improvement.weight;
+              progressCount++;
+            }
+          }
+        }
+      }
+      avgProgress = progressCount > 0 ? (avgProgress / progressCount) : 0;
+      // Compose stats
       const stats = {
         totalClients: clients.length,
-        sessionsToday: todaySessions.length,
-        sessionsThisWeek: todaySessions.length * 7, // Mock calculation
-        avgProgress: "+12%", // Mock value
-        aiPlansGenerated: 48, // Mock value
+        totalPlans: plans.length,
+        totalSessions: sessions.length,
+        sessionsToday: sessionsToday.length,
+        sessionsThisWeek: sessionsThisWeek.length,
+        avgProgress: progressCount > 0 ? `${avgProgress.toFixed(1)}%` : '0%',
+        aiPlansGenerated,
       };
-
       res.json(stats);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
@@ -331,25 +335,47 @@ Make sure the plan is appropriate for their experience level, respects their lim
   // Get today's sessions with client details
   app.get("/api/dashboard/today-sessions", async (req, res) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const sessions = await storage.getSessions(undefined, today);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const sessions = await storage.getSessions(undefined, todayStr);
       
       const sessionsWithClients = await Promise.all(
         sessions.map(async (session) => {
-          const client = await storage.getClient(session.clientId);
-          return {
-            ...session,
-            client,
-          };
+          try {
+            const client = await storage.getClient(session.clientId);
+            if (!client) {
+              console.warn(`[today-sessions] Client not found for session`, session.id, 'clientId:', session.clientId);
+              return null;
+            }
+            return {
+              ...session,
+              client,
+            };
+          } catch (err) {
+            console.error(`[today-sessions] Error resolving client for session`, session.id, err);
+            return null;
+          }
         })
       );
 
-      res.json(sessionsWithClients);
+      res.json(sessionsWithClients.filter(Boolean));
     } catch (error) {
+      console.error('[today-sessions] Fatal error:', error);
       res.status(500).json({ message: "Failed to fetch today's sessions" });
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  app.delete("/api/workout-plans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteWorkoutPlan(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Workout plan not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete workout plan" });
+    }
+  });
+
+  return server;
 }

@@ -66,6 +66,11 @@ export const insertWorkoutPlanSchema = createInsertSchema(workoutPlans).omit({
 export const insertSessionSchema = createInsertSchema(sessions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.preprocess((arg) => {
+    if (typeof arg === 'string' || arg instanceof Date) return new Date(arg);
+    return arg;
+  }, z.date()),
 });
 
 export const insertExerciseProgressSchema = createInsertSchema(exerciseProgress).omit({

@@ -6,11 +6,17 @@ import { useQuery } from '@tanstack/react-query';
 import { sessionApi, clientApi } from '@/lib/api';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import type { Session, Client } from '@shared/schema';
+import { ScheduleSessionModal } from '@/components/modals/schedule-session-modal';
+import { SessionDetailModal } from '@/components/modals/session-detail-modal';
 
 export function Calendar() {
   const { t } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<'month' | 'week' | 'day'>('month');
+  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedSessionClient, setSelectedSessionClient] = useState<Client | null>(null);
+  const [isSessionDetailModalOpen, setIsSessionDetailModalOpen] = useState(false);
 
   // Get the current month's dates
   const today = new Date();
@@ -140,7 +146,7 @@ export function Calendar() {
             </div>
             
             <div className="flex items-center space-x-2">
-              <Button>
+              <Button onClick={() => setIsAddSessionModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('calendar.add_session')}
               </Button>
@@ -228,12 +234,19 @@ export function Calendar() {
                       return (
                         <div
                           key={session.id}
-                          className={`text-xs px-2 py-1 rounded truncate ${sessionColor} ${
-                            day.isToday ? 'font-medium' : ''
-                          }`}
+                          className={`text-xs px-2 py-1 rounded truncate cursor-pointer transition-all duration-150 border border-slate-200 hover:bg-blue-100 hover:text-blue-900 ${sessionColor} ${day.isToday ? 'font-medium' : ''}`}
                           title={`${session.startTime} - ${client.name}`}
+                          onClick={() => {
+                            setSelectedSession(session);
+                            setSelectedSessionClient(client);
+                            setIsSessionDetailModalOpen(true);
+                          }}
                         >
-                          {session.startTime} {getInitials(client.name)}
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{session.startTime} - {session.endTime || '--'}</span>
+                            <span className="truncate">{client.name}</span>
+                            {session.notes && <span className="italic text-slate-200/80">{session.notes.slice(0, 20)}{session.notes.length > 20 ? '...' : ''}</span>}
+                          </div>
                         </div>
                       );
                     })}
@@ -258,6 +271,17 @@ export function Calendar() {
           Loading sessions...
         </div>
       )}
+      <ScheduleSessionModal 
+        open={isAddSessionModalOpen}
+        onClose={() => setIsAddSessionModalOpen(false)}
+        preSelectedDate={currentDate}
+      />
+      <SessionDetailModal
+        open={isSessionDetailModalOpen}
+        onClose={() => setIsSessionDetailModalOpen(false)}
+        session={selectedSession}
+        client={selectedSessionClient}
+      />
     </div>
   );
 }

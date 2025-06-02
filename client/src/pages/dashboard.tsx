@@ -34,7 +34,7 @@ export function Dashboard({
 }: DashboardProps) {
   const { t } = useLanguage();
 
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
+  const { data: stats, isLoading: isLoadingStats, error: statsError } = useQuery({
     queryKey: ['/api/dashboard/stats'],
     queryFn: dashboardApi.getStats,
   });
@@ -71,77 +71,85 @@ export function Dashboard({
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-600">{t('stats.total_clients')}</p>
-                {isLoadingStats ? (
-                  <Skeleton className="h-6 w-8" />
-                ) : (
-                  <p className="text-2xl font-bold text-slate-900">{stats?.totalClients || 0}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-600">{t('stats.sessions_week')}</p>
-                {isLoadingStats ? (
-                  <Skeleton className="h-6 w-8" />
-                ) : (
-                  <p className="text-2xl font-bold text-slate-900">{stats?.sessionsThisWeek || 0}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-amber-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-600">{t('stats.avg_progress')}</p>
-                {isLoadingStats ? (
-                  <Skeleton className="h-6 w-12" />
-                ) : (
-                  <p className="text-2xl font-bold text-slate-900">{stats?.avgProgress || '0%'}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Bot className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-slate-600">{t('stats.ai_plans')}</p>
-                {isLoadingStats ? (
-                  <Skeleton className="h-6 w-8" />
-                ) : (
-                  <p className="text-2xl font-bold text-slate-900">{stats?.aiPlansGenerated || 0}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {statsError ? (
+          <div className="col-span-4 text-center text-red-600 bg-red-50 rounded-lg p-4">
+            Failed to load dashboard stats. Please try again later.
+          </div>
+        ) : (
+          <>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-slate-600">{t('stats.total_clients')}</p>
+                    {isLoadingStats ? (
+                      <Skeleton className="h-6 w-8" />
+                    ) : (
+                      <p className="text-2xl font-bold text-slate-900">{stats?.totalClients || 0}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <Calendar className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-slate-600">{t('stats.sessions_week')}</p>
+                    {isLoadingStats ? (
+                      <Skeleton className="h-6 w-8" />
+                    ) : (
+                      <p className="text-2xl font-bold text-slate-900">{stats?.sessionsThisWeek || 0}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-slate-600">{t('stats.avg_progress')}</p>
+                    {isLoadingStats ? (
+                      <Skeleton className="h-6 w-12" />
+                    ) : (
+                      <p className="text-2xl font-bold text-slate-900">{stats?.avgProgress || '0%'}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Bot className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-slate-600">{t('stats.ai_plans')}</p>
+                    {isLoadingStats ? (
+                      <Skeleton className="h-6 w-8" />
+                    ) : (
+                      <p className="text-2xl font-bold text-slate-900">{stats?.aiPlansGenerated || 0}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Today's Schedule */}

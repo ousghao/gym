@@ -1,3 +1,4 @@
+import { db } from './db.js';
 import { 
   clients, 
   workoutPlans, 
@@ -12,6 +13,7 @@ import {
   type ExerciseProgress,
   type InsertExerciseProgress
 } from "@shared/schema";
+import { eq, and, sql } from 'drizzle-orm';
 
 export interface IStorage {
   // Client operations
@@ -172,7 +174,8 @@ export class MemStorage implements IStorage {
     const client: Client = { 
       ...insertClient, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      limitations: insertClient.limitations ?? null,
     };
     this.clients.set(id, client);
     return client;
@@ -206,7 +209,9 @@ export class MemStorage implements IStorage {
     const plan: WorkoutPlan = { 
       ...insertPlan, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      description: insertPlan.description ?? null,
+      isActive: insertPlan.isActive ?? true,
     };
     this.workoutPlans.set(id, plan);
     return plan;
@@ -234,10 +239,12 @@ export class MemStorage implements IStorage {
     }
     
     if (date) {
-      const targetDate = new Date(date);
-      sessions = sessions.filter(session => 
-        session.date.toDateString() === targetDate.toDateString()
-      );
+      // Compare only the date part (YYYY-MM-DD) for both session and target
+      const targetDateStr = new Date(date).toISOString().split('T')[0];
+      sessions = sessions.filter(session => {
+        const sessionDateStr = new Date(session.date).toISOString().split('T')[0];
+        return sessionDateStr === targetDateStr;
+      });
     }
     
     return sessions;
@@ -252,7 +259,11 @@ export class MemStorage implements IStorage {
     const session: Session = { 
       ...insertSession, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      status: insertSession.status ?? 'scheduled',
+      workoutPlanId: insertSession.workoutPlanId ?? null,
+      endTime: insertSession.endTime ?? null,
+      notes: insertSession.notes ?? null,
     };
     this.sessions.set(id, session);
     return session;
@@ -291,7 +302,13 @@ export class MemStorage implements IStorage {
     const progress: ExerciseProgress = { 
       ...insertProgress, 
       id, 
-      date: new Date() 
+      date: new Date(),
+      weight: insertProgress.weight ?? null,
+      reps: insertProgress.reps ?? null,
+      sets: insertProgress.sets ?? null,
+      duration: insertProgress.duration ?? null,
+      notes: insertProgress.notes ?? null,
+      sessionId: insertProgress.sessionId ?? null,
     };
     this.exerciseProgress.set(id, progress);
     return progress;
