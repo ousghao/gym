@@ -40,7 +40,9 @@ app.use((req, res, next) => {
 
 // Register API routes
 await registerRoutes(app, storage);
-app.get('/', (req, res) => {
+
+// Healthcheck root route
+app.get('/', (_req, res) => {
   res.send('✅ API is up and running');
 });
 
@@ -54,13 +56,12 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 // Static or Vite middleware
 if (app.get("env") === "development") {
-  await setupVite(app); // setupVite handles its own listening if needed
+  await setupVite(app);
 } else {
   serveStatic(app);
 }
 
-
-// 🔥 Start the server
+// Start the server
 const port = parseInt(process.env.PORT || '5000', 10);
 app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Server running on http://localhost:${port}`);
