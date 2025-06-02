@@ -4,6 +4,7 @@ import { registerRoutes } from './routes.js';
 import { setupVite, serveStatic, log } from './vite.js';
 import { DbStorage } from './db-storage.js';
 import { createServer } from 'http';
+import path from 'path';
 
 const app = express();
 const httpServer = createServer(app);
@@ -40,12 +41,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-await registerRoutes(app, storage);
+// Health check endpoint (MUST come first)
+app.get('/health', (_req, res) => {
+  res.status(200).send('OK');
+});
 
+// Root route for general visibility
 app.get('/', (_req, res) => {
   res.send('✅ API is up and running');
 });
+
+// Routes
+try {
+  await registerRoutes(app, storage);
+} catch (err) {
+  console.error('FATAL STARTUP ERROR:', err);
+  process.exit(1);
+}
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -59,7 +71,13 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 if (app.get("env") === "development") {
   await setupVite(app, httpServer);
 } else {
-  serveStatic(app);
+  // Serve static files ONLY from a specific directory
+  app.use(express.static('dist/public'));
+  
+  // Important: Don't add catch-all here if you have API routes
+  app.use("*", (_req, res) => {
+    res.sendFile(path.resolve('dist/public', 'index.html'));
+  });
 }
 
 // ✅ Correct usage of httpServer
