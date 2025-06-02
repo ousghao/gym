@@ -43,6 +43,11 @@ app.use((req, res, next) => {
 // Routes
 await registerRoutes(app, storage);
 
+// Health check endpoint for Railway
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const status = err.status || 500;
