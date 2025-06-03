@@ -25,20 +25,40 @@ function parseGeminiPlan(raw: string): any[] | null {
     cleaned = cleaned.replace(/```json|```/gi, '').trim();
     // Remove leading/trailing newlines and whitespace
     cleaned = cleaned.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
+    
+    // Fix common JSON syntax errors
+    cleaned = cleaned.replace(/"reps":\s*"Máximo"/g, '"reps": "Máximo"');
+    cleaned = cleaned.replace(/"reps":\s*Máximo/g, '"reps": "Máximo"');
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+)\s*"([^\"]+)\"/g, (_, num, text) => `"reps": "${num} ${text}"`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+\s*-\s*[0-9]+)\s*\"([^\"]+)\"/g, (_, range, text) => `"reps": "${range} ${text}"`);
+    
+    // Try to parse the JSON
     let arr = JSON.parse(cleaned);
+    
     // If Spanish keys detected, map to English keys
-    if (Array.isArray(arr) && arr.length > 0 && (arr[0].nombre || arr[0].enfoque || arr[0].ejercicios)) {
-      arr = arr.map((day: any, idx: number) => ({
-        day: day.nombre || day.day || `Día ${idx + 1}`,
-        focus: day.enfoque || day.focus,
-        exercises: Array.isArray(day.ejercicios)
-          ? day.ejercicios.map((ex: any) => ({
-              name: ex.nombre || ex.name,
-              sets: ex.series || ex.sets,
-              reps: ex.repeticiones || ex.reps,
-            }))
-          : day.exercises,
-      }));
+    if (Array.isArray(arr) && arr.length > 0) {
+      arr = arr.map((day: any, idx: number) => {
+        const focus = day.focus || day.enfoque || 'General';
+        const isRest = focus.toLowerCase().includes('descanso') || 
+                      focus.toLowerCase().includes('rest') || 
+                      focus.toLowerCase().includes('recovery');
+        const isActiveRest = focus.toLowerCase().includes('activo') || 
+                           focus.toLowerCase().includes('active');
+        
+        return {
+          day: day.day || day.dia || `Day ${idx + 1}`,
+          focus: focus,
+          exercises: Array.isArray(day.exercises || day.ejercicios) 
+            ? (day.exercises || day.ejercicios).map((ex: any) => ({
+                name: ex.name || ex.nombre || '',
+                sets: ex.sets || ex.series || 0,
+                reps: ex.reps || ex.repeticiones || '',
+              }))
+            : [],
+          isRest: isRest,
+          isActiveRest: isActiveRest
+        };
+      });
     }
     return arr;
   } catch (e) {
@@ -158,26 +178,41 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
 
   const generateWorkoutMutation = useMutation({
     mutationFn: workoutPlanApi.generateAI,
-    onSuccess: (data) => {
-      let cleanPlan = data.plan;
-      // If plan is a string or has .raw, always parse
-      if (typeof data.plan === 'string') {
-        const parsed = parseGeminiPlan(data.plan);
-        cleanPlan = parsed || [];
-      } else if (data.plan && typeof data.plan === 'object' && 'raw' in data.plan) {
-        const parsed = parseGeminiPlan((data.plan as any).raw);
-        cleanPlan = parsed || [];
+    onSuccess: (data: any) => {
+      try {
+        let cleanPlan = data.plan;
+        // If plan is a string or has .raw, always parse
+        if (typeof data.plan === 'string') {
+          const parsed = parseGeminiPlan(data.plan);
+          cleanPlan = parsed || [];
+        } else if (data.plan && typeof data.plan === 'object' && 'raw' in data.plan) {
+          const parsed = parseGeminiPlan((data.plan as any).raw);
+          cleanPlan = parsed || [];
+        }
+        
+        if (!Array.isArray(cleanPlan) || cleanPlan.length === 0) {
+          throw new Error('Invalid plan format');
+        }
+        
+        setGeneratedPlan({
+          ...data,
+          plan: cleanPlan,
+        });
+        setGenerationStatus('success');
+        queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
+        toast({
+          title: "Success",
+          description: "Workout plan generated successfully!",
+        });
+      } catch (error) {
+        console.error('Error processing plan:', error);
+        setGenerationStatus('error');
+        toast({
+          title: "Error",
+          description: "Failed to process workout plan",
+          variant: "destructive",
+        });
       }
-      setGeneratedPlan({
-        ...data,
-        plan: cleanPlan,
-      });
-      setGenerationStatus('success');
-      queryClient.invalidateQueries({ queryKey: ['/api/workout-plans'] });
-      toast({
-        title: "Success",
-        description: "Workout plan generated successfully!",
-      });
     },
     onError: (error: any) => {
       setGenerationStatus('error');
@@ -410,26 +445,76 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                         <div className="grid gap-6 md:grid-cols-2">
                           {planArr.map((day: any, idx: number) => {
                             const focusLower = (day.focus || '').toLowerCase();
-                            const isRest = focusLower.includes('rest') || focusLower.includes('descanso') || focusLower.includes('recovery') || focusLower.includes('recuperación');
+                            const isRest = focusLower.includes('rest') || 
+                                          focusLower.includes('descanso') || 
+                                          focusLower.includes('recovery') || 
+                                          focusLower.includes('recuperación');
+                            const isActiveRest = focusLower.includes('activo') || 
+                                               focusLower.includes('active');
+                            
                             return (
                               <Card
                                 key={idx}
-                                className={`relative overflow-visible shadow-lg border-0 ${isRest ? 'bg-gradient-to-br from-blue-50 to-blue-100' : 'bg-gradient-to-br from-emerald-50 to-white'} rounded-2xl pl-4`}
-                                style={{ borderLeft: `6px solid ${isRest ? '#60a5fa' : '#34d399'}` }}
+                                className={`relative overflow-visible shadow-lg border-0 ${
+                                  isRest 
+                                    ? isActiveRest 
+                                      ? 'bg-gradient-to-br from-blue-50 to-blue-100' 
+                                      : 'bg-gradient-to-br from-slate-50 to-slate-100'
+                                    : 'bg-gradient-to-br from-emerald-50 to-white'
+                                } rounded-2xl pl-4`}
+                                style={{ 
+                                  borderLeft: `6px solid ${
+                                    isRest 
+                                      ? isActiveRest 
+                                        ? '#60a5fa' 
+                                        : '#94a3b8'
+                                      : '#34d399'
+                                  }`
+                                }}
                               >
                                 <div className="absolute -left-6 top-6 flex flex-col items-center">
-                                  <span className="text-3xl select-none" style={{ filter: isRest ? 'grayscale(0.5)' : 'none' }}>{getDayIcon(day.focus)}</span>
-                                  <span className={`text-xs font-bold mt-1 ${isRest ? 'text-blue-400' : 'text-emerald-500'}`}>{day.day.split(' ')[1] || idx + 1}</span>
+                                  <span className="text-3xl select-none" style={{ filter: isRest ? 'grayscale(0.5)' : 'none' }}>
+                                    {getDayIcon(day.focus)}
+                                  </span>
+                                  <span className={`text-xs font-bold mt-1 ${
+                                    isRest 
+                                      ? isActiveRest 
+                                        ? 'text-blue-400' 
+                                        : 'text-slate-400'
+                                      : 'text-emerald-500'
+                                  }`}>
+                                    {day.day.split(' ')[1] || idx + 1}
+                                  </span>
                                 </div>
                                 <CardHeader className="pb-2 flex-row items-center gap-2 pl-8">
-                                  <CardTitle className="text-lg font-bold tracking-tight">{day.day} <span className="text-base font-normal text-slate-500">— {day.focus}</span></CardTitle>
+                                  <CardTitle className="text-lg font-bold tracking-tight">
+                                    {day.day} <span className="text-base font-normal text-slate-500">— {day.focus}</span>
+                                  </CardTitle>
                                 </CardHeader>
                                 <CardContent className="pl-8">
                                   {isRest ? (
                                     <div className="text-center text-lg py-6 flex flex-col items-center">
-                                      <span className="text-4xl mb-2">🛌</span>
-                                      <span className="font-semibold text-blue-600">{language === 'es' ? 'Día de Descanso' : 'Rest Day'}</span>
-                                      <span className="text-slate-500 mt-2">{language === 'es' ? 'Recuerda hidratarte y moverte suavemente. ¡Tu cuerpo lo agradecerá!' : 'Remember to hydrate and move gently. Your body will thank you!'}</span>
+                                      <span className="text-4xl mb-2">
+                                        {isActiveRest ? '🚶' : '🛌'}
+                                      </span>
+                                      <span className={`font-semibold ${
+                                        isActiveRest ? 'text-blue-600' : 'text-slate-600'
+                                      }`}>
+                                        {isActiveRest 
+                                          ? (language === 'es' ? 'Descanso Activo' : 'Active Rest')
+                                          : (language === 'es' ? 'Día de Descanso' : 'Rest Day')
+                                        }
+                                      </span>
+                                      <span className="text-slate-500 mt-2">
+                                        {isActiveRest
+                                          ? (language === 'es' 
+                                              ? 'Mantén el movimiento suave y controlado. ¡Perfecto para la recuperación!' 
+                                              : 'Keep movement gentle and controlled. Perfect for recovery!')
+                                          : (language === 'es' 
+                                              ? 'Recuerda hidratarte y moverte suavemente. ¡Tu cuerpo lo agradecerá!' 
+                                              : 'Remember to hydrate and move gently. Your body will thank you!')
+                                        }
+                                      </span>
                                     </div>
                                   ) : day.exercises && day.exercises.length > 0 ? (
                                     <ul className="space-y-3">
