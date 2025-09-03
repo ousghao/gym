@@ -23,7 +23,7 @@ Replace the `DATABASE_URL` in your `.env` file with your Supabase connection str
 DATABASE_URL=postgresql://postgres:your_password@db.your_project_ref.supabase.co:5432/postgres
 
 # AI Configuration
-GEMINI_API_KEY=AIzaSyBw3dvIId3FcAtDhJXfhXnI6VaWAEsss1Y
+GEMINI_API_KEY=
 
 # Server Configuration
 NODE_ENV=development

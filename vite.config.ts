@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    ...(process.env.NODE_ENV === "development" ? [runtimeErrorOverlay()] : []),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -30,5 +30,23 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['lucide-react', '@radix-ui/react-dialog']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
+    },
   },
 });
