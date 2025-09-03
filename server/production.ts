@@ -6,6 +6,11 @@ import { ensureDatabaseReady } from './database-check.js';
 import { DbStorage } from './db-storage.js';
 import { createServer } from 'http';
 
+// Ensure NODE_ENV is set to production
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'production';
+}
+
 const app = express();
 const httpServer = createServer(app);
 const storage = new DbStorage();
