@@ -142,16 +142,37 @@ export class DbStorage implements IStorage {
 
   async getProgressSummary(clientId: number): Promise<any> {
     const progress = await this.getExerciseProgress(clientId);
-    return {
-      totalExercises: progress.length,
-      exercises: progress.reduce((acc, curr) => {
-        if (!acc[curr.exerciseName]) {
-          acc[curr.exerciseName] = [];
-        }
-        acc[curr.exerciseName].push(curr);
-        return acc;
-      }, {} as Record<string, ExerciseProgress[]>)
-    };
+    
+    // Group by exercise and calculate improvements
+    const exerciseGroups: Record<string, ExerciseProgress[]> = {};
+    progress.forEach(p => {
+      if (!exerciseGroups[p.exerciseName]) {
+        exerciseGroups[p.exerciseName] = [];
+      }
+      exerciseGroups[p.exerciseName].push(p);
+    });
+
+    const summary: Record<string, any> = {};
+    Object.entries(exerciseGroups).forEach(([exercise, records]) => {
+      records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const first = records[0];
+      const last = records[records.length - 1];
+      
+      summary[exercise] = {
+        totalSessions: records.length,
+        improvement: first && last ? {
+          weight: last.weight && first.weight ? ((last.weight - first.weight) / first.weight * 100) : 0,
+          reps: last.reps && first.reps ? ((last.reps - first.reps) / first.reps * 100) : 0,
+        } : null,
+        lastWeight: last.weight,
+        lastReps: last.reps,
+        lastSets: last.sets,
+        suggestedWeight: last.weight ? Math.round(last.weight * 1.05) : null,
+        allRecords: records,
+      };
+    });
+
+    return summary;
   }
 
   // MIGRATION: Convert all workout plans with .raw to parsed arrays

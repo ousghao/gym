@@ -11,10 +11,12 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { Dashboard } from "@/pages/dashboard";
 import { Clients } from "@/pages/clients";
 import { Calendar } from "@/pages/calendar";
+import { Progress } from "@/pages/progress";
 import { AddClientModal } from "@/components/modals/add-client-modal";
 import { ClientDetailModal } from "@/components/modals/client-detail-modal";
 import { WorkoutGeneratorModal } from "@/components/modals/workout-generator-modal";
 import { ProgressLogModal } from "@/components/modals/progress-log-modal";
+import { WorkoutSessionModal } from "@/components/modals/workout-session-modal";
 import { ScheduleSessionModal } from "@/components/modals/schedule-session-modal";
 import { ReportsModal } from "@/components/modals/reports-modal";
 import NotFound from "@/pages/not-found";
@@ -25,6 +27,7 @@ function Router() {
   const [isClientDetailModalOpen, setIsClientDetailModalOpen] = useState(false);
   const [isWorkoutGeneratorModalOpen, setIsWorkoutGeneratorModalOpen] = useState(false);
   const [isProgressLogModalOpen, setIsProgressLogModalOpen] = useState(false);
+  const [isWorkoutSessionModalOpen, setIsWorkoutSessionModalOpen] = useState(false);
   const [isScheduleSessionModalOpen, setIsScheduleSessionModalOpen] = useState(false);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -50,6 +53,11 @@ function Router() {
 
   const handleLogProgress = () => {
     setIsProgressLogModalOpen(true);
+  };
+
+  const handleStartWorkout = (clientId?: number) => {
+    setPreSelectedClientId(clientId);
+    setIsWorkoutSessionModalOpen(true);
   };
 
   const handleScheduleSession = () => {
@@ -81,6 +89,14 @@ function Router() {
         );
       case 'calendar':
         return <Calendar />;
+      case 'progress':
+        return (
+          <Progress
+            onLogProgress={handleLogProgress}
+            onStartWorkout={() => handleStartWorkout()}
+            onViewReports={handleViewReports}
+          />
+        );
       default:
         return (
           <Dashboard
@@ -88,6 +104,7 @@ function Router() {
             onLogProgress={handleLogProgress}
             onScheduleSession={handleScheduleSession}
             onViewReports={handleViewReports}
+            onStartWorkout={handleStartWorkout}
           />
         );
     }
@@ -125,6 +142,7 @@ function Router() {
         }}
         clientId={selectedClientId}
         onGenerateWorkout={handleGenerateWorkout}
+        onLogProgress={handleLogWorkout}
       />
 
       <WorkoutGeneratorModal
@@ -140,6 +158,15 @@ function Router() {
         open={isProgressLogModalOpen}
         onClose={() => {
           setIsProgressLogModalOpen(false);
+          setPreSelectedClientId(undefined);
+        }}
+        preSelectedClientId={preSelectedClientId}
+      />
+
+      <WorkoutSessionModal
+        open={isWorkoutSessionModalOpen}
+        onClose={() => {
+          setIsWorkoutSessionModalOpen(false);
           setPreSelectedClientId(undefined);
         }}
         preSelectedClientId={preSelectedClientId}

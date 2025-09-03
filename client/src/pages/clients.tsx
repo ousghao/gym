@@ -78,7 +78,7 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
     return (
       <div className="text-center py-12">
         <div className="text-red-500 text-lg font-medium mb-2">Error loading clients</div>
-        <p className="text-slate-600">Please try refreshing the page</p>
+        <p className="text-slate-600 dark:text-gray-300">Please try refreshing the page</p>
       </div>
     );
   }
@@ -95,23 +95,23 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search clients..."
-                  className="pl-10"
+                  className="pl-10 dark:bg-slate-800 dark:text-white dark:placeholder-gray-400"
                 />
-                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-gray-300" />
               </div>
             </div>
             <div className="flex gap-2">
               <Select value={goalFilter} onValueChange={setGoalFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 dark:bg-slate-800 dark:text-white dark:border-slate-600">
                   <SelectValue placeholder="All Goals" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Goals</SelectItem>
-                  <SelectItem value="weight_loss">{t('goals.weight_loss')}</SelectItem>
-                  <SelectItem value="muscle_gain">{t('goals.muscle_gain')}</SelectItem>
-                  <SelectItem value="endurance">{t('goals.endurance')}</SelectItem>
-                  <SelectItem value="strength">{t('goals.strength')}</SelectItem>
-                  <SelectItem value="general_fitness">{t('goals.general_fitness')}</SelectItem>
+                <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
+                  <SelectItem value="all" className="dark:text-white dark:hover:bg-slate-700">All Goals</SelectItem>
+                  <SelectItem value="weight_loss" className="dark:text-white dark:hover:bg-slate-700">{t('goals.weight_loss')}</SelectItem>
+                  <SelectItem value="muscle_gain" className="dark:text-white dark:hover:bg-slate-700">{t('goals.muscle_gain')}</SelectItem>
+                  <SelectItem value="endurance" className="dark:text-white dark:hover:bg-slate-700">{t('goals.endurance')}</SelectItem>
+                  <SelectItem value="strength" className="dark:text-white dark:hover:bg-slate-700">{t('goals.strength')}</SelectItem>
+                  <SelectItem value="general_fitness" className="dark:text-white dark:hover:bg-slate-700">{t('goals.general_fitness')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -172,9 +172,9 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
             </>
           ) : (
             <>
-              <Search className="h-16 w-16 mx-auto text-slate-400 mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No clients found</h3>
-              <p className="text-slate-600">Try adjusting your search or filter criteria</p>
+              <Search className="h-16 w-16 mx-auto text-slate-400 dark:text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No clients found</h3>
+              <p className="text-slate-600 dark:text-gray-300">Try adjusting your search or filter criteria</p>
             </>
           )}
         </div>
@@ -182,7 +182,7 @@ export function Clients({ onViewClient, onGenerateWorkout, onLogWorkout }: Clien
 
       {/* Results Summary */}
       {!isLoading && clients && clients.length > 0 && (
-        <div className="text-center text-sm text-slate-500">
+        <div className="text-center text-sm text-slate-500 dark:text-gray-400">
           Showing {filteredClients.length} of {clients.length} clients
         </div>
       )}

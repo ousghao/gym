@@ -16,132 +16,111 @@ interface WorkoutGeneratorModalProps {
   preSelectedClientId?: number;
 }
 
-// Utility to clean and parse Gemini response, supporting both English and Spanish keys
+// Unified, robust plan parsing function that handles all formats
 function parseGeminiPlan(raw: string): any[] | null {
-  if (!raw) return null;
+  if (!raw || typeof raw !== 'string') return null;
+
   try {
+    // Clean the string
     let cleaned = raw.trim();
-    // Remove all code block markers (```json, ```) globally
+    
+    // Remove code block markers
     cleaned = cleaned.replace(/```json|```/gi, '').trim();
-    // Remove leading/trailing newlines and whitespace
+    
+    // Remove leading/trailing whitespace and newlines
     cleaned = cleaned.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
     
-    // Fix common JSON syntax errors
-    cleaned = cleaned.replace(/"reps":\s*"Máximo"/g, '"reps": "Máximo"');
-    cleaned = cleaned.replace(/"reps":\s*Máximo/g, '"reps": "Máximo"');
-    cleaned = cleaned.replace(/"reps":\s*([0-9]+)\s*"([^\"]+)\"/g, (_, num, text) => `"reps": "${num} ${text}"`);
-    cleaned = cleaned.replace(/"reps":\s*([0-9]+\s*-\s*[0-9]+)\s*\"([^\"]+)\"/g, (_, range, text) => `"reps": "${range} ${text}"`);
+    // Fix common JSON issues
+    // Fix unquoted reps values
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*(?:per\s*leg|por\s*pierna|minutos?))?)/gi, (_, val) => `"reps": "${val.trim()}"`);
+    cleaned = cleaned.replace(/"reps":\s*(Máximo|Maximum)/gi, (_, val) => `"reps": "${val}"`);
+    cleaned = cleaned.replace(/"repeticiones":\s*([0-9]+(?:-[0-9]+)?(?:\s*(?:per\s*leg|por\s*pierna|minutos?))?)/gi, (_, val) => `"repeticiones": "${val.trim()}"`);
+    cleaned = cleaned.replace(/"repeticiones":\s*(Máximo|Maximum)/gi, (_, val) => `"repeticiones": "${val}"`);
     
-    // Try to parse the JSON
-    let arr = JSON.parse(cleaned);
+    // Fix trailing commas
+    cleaned = cleaned.replace(/,\s*\]/g, ']');
+    cleaned = cleaned.replace(/,\s*\}/g, '}');
     
-    // If Spanish keys detected, map to English keys
-    if (Array.isArray(arr) && arr.length > 0) {
-      arr = arr.map((day: any, idx: number) => {
-        const focus = day.focus || day.enfoque || 'General';
-        const isRest = focus.toLowerCase().includes('descanso') || 
-                      focus.toLowerCase().includes('rest') || 
-                      focus.toLowerCase().includes('recovery');
-        const isActiveRest = focus.toLowerCase().includes('activo') || 
-                           focus.toLowerCase().includes('active');
-        
-        return {
-          day: day.day || day.dia || `Day ${idx + 1}`,
-          focus: focus,
-          exercises: Array.isArray(day.exercises || day.ejercicios) 
-            ? (day.exercises || day.ejercicios).map((ex: any) => ({
-                name: ex.name || ex.nombre || '',
-                sets: ex.sets || ex.series || 0,
-                reps: ex.reps || ex.repeticiones || '',
-              }))
-            : [],
-          isRest: isRest,
-          isActiveRest: isActiveRest
-        };
-      });
+    // Ensure array brackets if missing
+    if (!cleaned.startsWith('[') && !cleaned.startsWith('{')) {
+      cleaned = '[' + cleaned + ']';
+    } else if (cleaned.startsWith('[') && !cleaned.endsWith(']')) {
+      cleaned += ']';
     }
-    return arr;
-  } catch (e) {
-    console.error('Failed to parse Gemini plan:', e, raw);
+
+    // Try to parse
+    const parsed = JSON.parse(cleaned);
+    
+    if (Array.isArray(parsed)) {
+      return normalizePlanArray(parsed);
+    } else if (parsed && typeof parsed === 'object') {
+      return normalizePlanArray([parsed]);
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Failed to parse Gemini plan:', error, raw);
     return null;
   }
 }
 
+// Normalize plan array to consistent format (handles both English and Spanish)
+function normalizePlanArray(arr: any[]): any[] {
+  if (!Array.isArray(arr) || arr.length === 0) return [];
+
+  return arr.map((day: any, idx: number) => {
+    const dayName = day.day || day.dia || `Day ${idx + 1}`;
+    const focus = day.focus || day.enfoque || 'General';
+    const exercises = day.exercises || day.ejercicios || [];
+
+    // Determine if it's a rest day
+    const isRest = focus.toLowerCase().includes('descanso') || 
+                  focus.toLowerCase().includes('rest') || 
+                  focus.toLowerCase().includes('recovery') ||
+                  exercises.length === 0;
+
+    const normalizedExercises = Array.isArray(exercises) ? exercises.map((ex: any) => ({
+      name: ex.name || ex.nombre || 'Exercise',
+      sets: ex.sets || ex.series || 0,
+      reps: ex.reps || ex.repeticiones || '0'
+    })) : [];
+
+    return {
+      day: dayName,
+      focus: focus,
+      exercises: normalizedExercises,
+      isRest: isRest
+    };
+  });
+}
+
 // Utility to get the plan array from any plan structure
 function getPlanArray(plan: any): any[] | null {
-  if (Array.isArray(plan)) return plan;
-  if (plan && typeof plan === 'object' && 'raw' in plan && typeof plan.raw === 'string') {
-    let cleaned = plan.raw.replace(/```json|```/gi, '').trim();
-    cleaned = cleaned.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
-    // Fix reps: 8-12, 10-15, Máximo, 10-15 por pierna, etc. (wrap in quotes if not already)
-    cleaned = cleaned.replace(/"reps":\s*([0-9]+\s*-\s*[0-9]+(\s*por\s*pierna)?)/g, (match, p1) => `"reps": "${p1.trim()}"`);
-    cleaned = cleaned.replace(/"reps":\s*(Máximo)/gi, (match, p1) => `"reps": "${p1}"`);
-    cleaned = cleaned.replace(/"reps":\s*([0-9]+)\s*\"([^\"]+)\"/g, (match, num, text) => `"reps": "${num} ${text}"`);
-    cleaned = cleaned.replace(/"reps":\s*([0-9]+\s*-\s*[0-9]+)\s*\"([^\"]+)\"/g, (match, range, text) => `"reps": "${range} ${text}"`);
-    // Fix unquoted repeticiones with non-numeric values (e.g. 30 minutos, Máximo, etc.)
-    cleaned = cleaned.replace(/("repeticiones"\s*:\s*)([0-9]+(?:\s*[^\d"\n,}]*)?)/gi, (_, key, val) => {
-      const shouldQuote = !/^".*"$/.test(val.trim());
-      return shouldQuote ? `${key}"${val.trim()}"` : `${key}${val}`;
-    });
-    // Try to auto-close a missing array bracket
-    if (cleaned.startsWith('[') && !cleaned.endsWith(']')) cleaned += ']';
-    try {
-      let arr = JSON.parse(cleaned);
-      // Map Spanish keys to English for display, but keep Spanish values
-      if (Array.isArray(arr) && arr.length > 0) {
-        arr = arr.map((day: any, idx: number) => {
-          // Support both English and Spanish keys
-          const d = day.dia || day.day || `Día ${idx + 1}`;
-          const f = day.enfoque || day.focus;
-          let exercises = day.ejercicios || day.exercises;
-          if (Array.isArray(exercises)) {
-            exercises = exercises.map((ex: any) => ({
-              name: ex.nombre || ex.name,
-              sets: ex.series || ex.sets,
-              reps: ex.repeticiones || ex.reps,
-            }));
-          }
-          return {
-            day: d,
-            focus: f,
-            exercises: exercises || [],
-          };
-        });
-      }
-      return arr;
-    } catch (e) {
-      // Fallback: try to recover from a trailing comma or other minor issues
-      try {
-        let fixed = cleaned.replace(/,\s*\]/g, ']');
-        let arr = JSON.parse(fixed);
-        if (Array.isArray(arr) && arr.length > 0) {
-          arr = arr.map((day: any, idx: number) => {
-            const d = day.dia || day.day || `Día ${idx + 1}`;
-            const f = day.enfoque || day.focus;
-            let exercises = day.ejercicios || day.exercises;
-            if (Array.isArray(exercises)) {
-              exercises = exercises.map((ex: any) => ({
-                name: ex.nombre || ex.name,
-                sets: ex.series || ex.sets,
-                reps: ex.repeticiones || ex.reps,
-              }));
-            }
-            return {
-              day: d,
-              focus: f,
-              exercises: exercises || [],
-            };
-          });
-        }
-        return arr;
-      } catch (e2) {
-        return null;
-      }
-    }
+  // Case 1: Already an array
+  if (Array.isArray(plan)) {
+    return normalizePlanArray(plan);
   }
+
+  // Case 2: Object with raw property (error case from backend)
+  if (plan && typeof plan === 'object' && 'raw' in plan && typeof plan.raw === 'string') {
+    return parseGeminiPlan(plan.raw);
+  }
+
+  // Case 3: String (raw AI response)
   if (typeof plan === 'string') {
     return parseGeminiPlan(plan);
   }
+
+  // Case 4: Object that might be a parsed plan
+  if (plan && typeof plan === 'object') {
+    // Check if it looks like a parsed plan object
+    const keys = Object.keys(plan);
+    if (keys.some(key => key.includes('day') || key.includes('dia'))) {
+      // Convert object to array format
+      return normalizePlanArray([plan]);
+    }
+  }
+
   return null;
 }
 
@@ -318,15 +297,15 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto dark:bg-slate-900 dark:text-white">
         <DialogHeader>
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Bot className="h-5 w-5 text-white" />
             </div>
             <div>
-              <DialogTitle>{t('modals.workout_generator.title')}</DialogTitle>
-              <p className="text-sm text-muted-foreground">{t('modals.workout_generator.subtitle')}</p>
+              <DialogTitle className="dark:text-white">{t('modals.workout_generator.title')}</DialogTitle>
+              <p className="text-sm text-muted-foreground dark:text-gray-300">{t('modals.workout_generator.subtitle')}</p>
             </div>
           </div>
         </DialogHeader>
@@ -334,20 +313,20 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
         <div className="space-y-6">
           {/* Client Selection */}
           <div>
-            <Label>{t('forms.select_client')}</Label>
+            <Label className="dark:text-white">{t('forms.select_client')}</Label>
             <Select 
               value={selectedClientId?.toString()} 
               onValueChange={(value) => setSelectedClientId(parseInt(value))}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose client..." />
+              <SelectTrigger className="dark:bg-slate-800 dark:border-slate-600 dark:text-white">
+                <SelectValue placeholder="Choose client..." className="dark:text-gray-300" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
                 {clients?.map((client) => {
                   const goalKey = `goals.${client.goal}`;
                   const goalLabel = t(goalKey) !== goalKey ? t(goalKey) : client.goal;
                   return (
-                    <SelectItem key={client.id} value={client.id.toString()}>
+                    <SelectItem key={client.id} value={client.id.toString()} className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">
                       {client.name} - {goalLabel}
                     </SelectItem>
                   );
@@ -357,33 +336,33 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
           </div>
 
           {/* Generation Options */}
-          <div className="bg-slate-50 rounded-lg p-4">
-            <h3 className="font-semibold text-slate-900 mb-3">{t('generator.options')}</h3>
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border dark:border-slate-700">
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-3">{t('generator.options')}</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label>{t('generator.plan_duration')}</Label>
+                <Label className="dark:text-white">{t('generator.plan_duration')}</Label>
                 <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger>
+                  <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1_week">1 Week</SelectItem>
-                    <SelectItem value="2_weeks">2 Weeks</SelectItem>
-                    <SelectItem value="4_weeks">4 Weeks</SelectItem>
+                  <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
+                    <SelectItem value="1_week" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">1 Week</SelectItem>
+                    <SelectItem value="2_weeks" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">2 Weeks</SelectItem>
+                    <SelectItem value="4_weeks" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">4 Weeks</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>{t('generator.focus_area')}</Label>
+                <Label className="dark:text-white">{t('generator.focus_area')}</Label>
                 <Select value={focus} onValueChange={setFocus}>
-                  <SelectTrigger>
+                  <SelectTrigger className="dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="balanced">Balanced Training</SelectItem>
-                    <SelectItem value="strength">Strength Focus</SelectItem>
-                    <SelectItem value="cardio">Cardio Focus</SelectItem>
-                    <SelectItem value="flexibility">Flexibility Focus</SelectItem>
+                  <SelectContent className="dark:bg-slate-800 dark:border-slate-600">
+                    <SelectItem value="balanced" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">Balanced Training</SelectItem>
+                    <SelectItem value="strength" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">Strength Focus</SelectItem>
+                    <SelectItem value="cardio" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">Cardio Focus</SelectItem>
+                    <SelectItem value="flexibility" className="dark:text-white dark:hover:bg-slate-700 dark:focus:bg-slate-700">Flexibility Focus</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -391,18 +370,18 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
           </div>
 
           {/* AI Generation Status */}
-          <div className="border border-slate-200 rounded-lg p-6 text-center">
+          <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-6 text-center dark:bg-slate-800/50">
             {/* Idle State */}
             {generationStatus === 'idle' && (
               <div className="space-y-3">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto">
-                  <Sparkles className="h-8 w-8 text-purple-600" />
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 rounded-full flex items-center justify-center mx-auto">
+                  <Sparkles className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">{t('generator.ready_title')}</h3>
-                <p className="text-slate-600">{t('generator.ready_description')}</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{t('generator.ready_title')}</h3>
+                <p className="text-slate-600 dark:text-slate-300">{t('generator.ready_description')}</p>
                 <Button 
                   onClick={handleGenerate}
-                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 dark:from-purple-500 dark:to-purple-600 dark:hover:from-purple-600 dark:hover:to-purple-700"
                   disabled={!selectedClientId}
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
@@ -414,13 +393,13 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
             {/* Loading State */}
             {generationStatus === 'generating' && (
               <div className="space-y-3">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto">
-                  <Cog className="h-8 w-8 text-purple-600 animate-spin" />
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 rounded-full flex items-center justify-center mx-auto">
+                  <Cog className="h-8 w-8 text-purple-600 dark:text-purple-400 animate-spin" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">{t('generator.generating_title')}</h3>
-                <p className="text-slate-600">{t('generator.generating_description')}</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{t('generator.generating_title')}</h3>
+                <p className="text-slate-600 dark:text-slate-300">{t('generator.generating_description')}</p>
                 <div className="w-32 h-2 bg-slate-200 rounded-full mx-auto">
-                  <div className="h-2 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full animate-pulse w-3/4"></div>
+                  <div className="h-2 bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-500 dark:to-purple-600 rounded-full animate-pulse w-3/4"></div>
                 </div>
               </div>
             )}
@@ -428,15 +407,15 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
             {/* Success State */}
             {generationStatus === 'success' && generatedPlan && (
               <div className="space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-full flex items-center justify-center mx-auto">
-                  <Check className="h-8 w-8 text-emerald-600" />
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900/50 dark:to-emerald-800/50 rounded-full flex items-center justify-center mx-auto">
+                  <Check className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">{t('generator.success_title')}</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{t('generator.success_title')}</h3>
                 
                 {/* Generated Plan Preview */}
-                <div className="bg-white border border-slate-200 rounded-lg p-4 text-left">
-                  <h4 className="font-semibold text-slate-900 mb-3">{generatedPlan.name}</h4>
-                  <p className="text-sm text-slate-600 mb-3">{generatedPlan.description}</p>
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 text-left">
+                  <h4 className="font-semibold text-slate-900 dark:text-white mb-3">{generatedPlan.name}</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">{generatedPlan.description}</p>
                   {/* Visual Gemini Plan Display - Cards per day */}
                   {(() => {
                     const planArr = getPlanArray(generatedPlan.plan);
@@ -458,9 +437,9 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                                 className={`relative overflow-visible shadow-lg border-0 ${
                                   isRest 
                                     ? isActiveRest 
-                                      ? 'bg-gradient-to-br from-blue-50 to-blue-100' 
-                                      : 'bg-gradient-to-br from-slate-50 to-slate-100'
-                                    : 'bg-gradient-to-br from-emerald-50 to-white'
+                                      ? 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20' 
+                                      : 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700'
+                                    : 'bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-slate-800'
                                 } rounded-2xl pl-4`}
                                 style={{ 
                                   borderLeft: `6px solid ${
@@ -487,8 +466,8 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                                   </span>
                                 </div>
                                 <CardHeader className="pb-2 flex-row items-center gap-2 pl-8">
-                                  <CardTitle className="text-lg font-bold tracking-tight">
-                                    {day.day} <span className="text-base font-normal text-slate-500">— {day.focus}</span>
+                                  <CardTitle className="text-lg font-bold tracking-tight dark:text-white">
+                                    {day.day} <span className="text-base font-normal text-slate-500 dark:text-slate-400">— {day.focus}</span>
                                   </CardTitle>
                                 </CardHeader>
                                 <CardContent className="pl-8">
@@ -498,14 +477,14 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                                         {isActiveRest ? '🚶' : '🛌'}
                                       </span>
                                       <span className={`font-semibold ${
-                                        isActiveRest ? 'text-blue-600' : 'text-slate-600'
+                                        isActiveRest ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'
                                       }`}>
                                         {isActiveRest 
                                           ? (language === 'es' ? 'Descanso Activo' : 'Active Rest')
                                           : (language === 'es' ? 'Día de Descanso' : 'Rest Day')
                                         }
                                       </span>
-                                      <span className="text-slate-500 mt-2">
+                                      <span className="text-slate-500 dark:text-slate-400 mt-2">
                                         {isActiveRest
                                           ? (language === 'es' 
                                               ? 'Mantén el movimiento suave y controlado. ¡Perfecto para la recuperación!' 
@@ -519,10 +498,10 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                                   ) : day.exercises && day.exercises.length > 0 ? (
                                     <ul className="space-y-3">
                                       {day.exercises.map((ex: any, i: number) => (
-                                        <li key={i} className="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2 shadow-sm">
+                                        <li key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-2 shadow-sm">
                                           <span className="text-lg">{i === 0 ? '🔥' : '•'}</span>
-                                          <span className="font-medium text-slate-800">{ex.name}</span>
-                                          <span className="ml-auto text-slate-600 text-sm">
+                                          <span className="font-medium text-slate-800 dark:text-white">{ex.name}</span>
+                                          <span className="ml-auto text-slate-600 dark:text-slate-300 text-sm">
                                             {ex.sets} {language === 'es' ? 'series' : 'sets'}
                                             {ex.reps ? ` × ${ex.reps} ${language === 'es' ? 'repeticiones' : 'reps'}` : ''}
                                           </span>
@@ -530,7 +509,7 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                                       ))}
                                     </ul>
                                   ) : (
-                                    <div className="text-center text-slate-400 italic py-4">
+                                    <div className="text-center text-slate-400 dark:text-slate-500 italic py-4">
                                       {language === 'es' ? 'No hay ejercicios listados.' : 'No exercises listed.'}
                                     </div>
                                   )}
@@ -542,7 +521,7 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                       );
                     } else {
                       return (
-                        <div className="text-red-600 bg-red-50 rounded p-3">
+                        <div className="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded p-3">
                           {language === 'es' ? 'No se pudo analizar el plan. Por favor, regenera.' : 'Failed to parse plan. Please regenerate.'}
                         </div>
                       );
@@ -555,7 +534,7 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
                     <Save className="h-4 w-4 mr-2" />
                     {t('actions.save_plan')}
                   </Button>
-                  <Button onClick={handleRegenerate} variant="secondary" className="flex-1">
+                  <Button onClick={handleRegenerate} variant="secondary" className="flex-1 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600">
                     <RotateCcw className="h-4 w-4 mr-2" />
                     {t('actions.regenerate')}
                   </Button>
@@ -566,12 +545,12 @@ export function WorkoutGeneratorModal({ open, onClose, preSelectedClientId }: Wo
             {/* Error State */}
             {generationStatus === 'error' && (
               <div className="space-y-3">
-                <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mx-auto">
-                  <X className="h-8 w-8 text-red-600" />
+                <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/50 dark:to-red-800/50 rounded-full flex items-center justify-center mx-auto">
+                  <X className="h-8 w-8 text-red-600 dark:text-red-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Generation Failed</h3>
-                <p className="text-slate-600">There was an error generating the workout plan. Please try again.</p>
-                <Button onClick={handleRegenerate} variant="secondary">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Generation Failed</h3>
+                <p className="text-slate-600 dark:text-slate-300">There was an error generating the workout plan. Please try again.</p>
+                <Button onClick={handleRegenerate} variant="secondary" className="dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600">
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Try Again
                 </Button>

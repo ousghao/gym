@@ -78,7 +78,7 @@ export const sessionApi = {
     return response.json();
   },
 
-  update: async (id: number, session: Partial<InsertSession>): Promise<Session> => {
+  update: async (id: number, session: Partial<Session>): Promise<Session> => {
     const response = await apiRequest('PATCH', `/api/sessions/${id}`, session);
     return response.json();
   },

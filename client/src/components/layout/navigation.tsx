@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/hooks/use-language';
-import { Dumbbell, Users, Calendar, BarChart3, Plus, Menu } from 'lucide-react';
+import { Dumbbell, Users, Calendar, BarChart3, Plus, Menu, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LanguageToggle } from '@/components/language-toggle';
@@ -32,8 +32,8 @@ export function Navigation({ currentView, onViewChange, onAddClient }: Navigatio
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-primary">
-                <Dumbbell className="inline h-6 w-6 mr-2" />
+              <h1 className="text-xl font-bold text-primary dark:text-white flex items-center">
+                <Dumbbell className="inline h-6 w-6 mr-2 text-primary dark:text-white" />
                 {t('app.title')}
               </h1>
             </div>
@@ -74,6 +74,15 @@ export function Navigation({ currentView, onViewChange, onAddClient }: Navigatio
                 >
                   <Calendar className="h-4 w-4 mr-2" />
                   {t('nav.calendar')}
+                </Button>
+                <Button
+                  variant={currentView === 'progress' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => onViewChange('progress')}
+                  className={currentView === 'progress' ? 'bg-primary/10 text-primary' : ''}
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Progress
                 </Button>
               </div>
             </div>
@@ -125,6 +134,14 @@ export function Navigation({ currentView, onViewChange, onAddClient }: Navigatio
                         >
                           <Calendar className="h-4 w-4 mr-2" />
                           {t('nav.calendar')}
+                        </Button>
+                        <Button
+                          variant={currentView === 'progress' ? 'default' : 'ghost'}
+                          onClick={() => handleViewChange('progress')}
+                          className="w-full justify-start"
+                        >
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Progress
                         </Button>
                       </div>
                     </div>

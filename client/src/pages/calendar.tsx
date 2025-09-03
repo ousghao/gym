@@ -123,7 +123,7 @@ export function Calendar() {
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between">
             <div className="flex items-center space-x-4 mb-4 sm:mb-0">
-              <h2 className="text-xl font-semibold text-slate-900">{t('calendar.title')}</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('calendar.title')}</h2>
               <div className="flex items-center space-x-2">
                 <Button
                   variant="ghost"
@@ -132,7 +132,7 @@ export function Calendar() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="font-medium text-slate-900 min-w-[120px] text-center">
+                <span className="font-medium text-slate-900 dark:text-white min-w-[120px] text-center">
                   {formatMonthYear(currentDate)}
                 </span>
                 <Button
@@ -150,12 +150,12 @@ export function Calendar() {
                 <Plus className="h-4 w-4 mr-2" />
                 {t('calendar.add_session')}
               </Button>
-              <div className="flex bg-slate-100 rounded-lg p-1">
+              <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
                 <Button
                   variant={viewType === 'month' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewType('month')}
-                  className={viewType === 'month' ? 'bg-white shadow-sm' : ''}
+                  className={viewType === 'month' ? 'bg-white dark:bg-slate-600 shadow-sm' : ''}
                 >
                   {t('calendar.month')}
                 </Button>
@@ -163,7 +163,7 @@ export function Calendar() {
                   variant={viewType === 'week' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewType('week')}
-                  className={viewType === 'week' ? 'bg-white shadow-sm' : ''}
+                  className={viewType === 'week' ? 'bg-white dark:bg-slate-600 shadow-sm' : ''}
                 >
                   {t('calendar.week')}
                 </Button>
@@ -171,7 +171,7 @@ export function Calendar() {
                   variant={viewType === 'day' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setViewType('day')}
-                  className={viewType === 'day' ? 'bg-white shadow-sm' : ''}
+                  className={viewType === 'day' ? 'bg-white dark:bg-slate-600 shadow-sm' : ''}
                 >
                   {t('calendar.day')}
                 </Button>
@@ -184,9 +184,9 @@ export function Calendar() {
       {/* Calendar Grid */}
       <Card className="overflow-hidden">
         {/* Calendar Header Days */}
-        <div className="grid grid-cols-7 border-b border-slate-200">
+        <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-700">
           {dayNames.map((day, index) => (
-            <div key={index} className="p-4 text-center font-medium text-slate-600 border-r border-slate-200 last:border-r-0">
+            <div key={index} className="p-4 text-center font-medium text-slate-600 dark:text-gray-300 border-r border-slate-200 dark:border-slate-700 last:border-r-0">
               {day}
             </div>
           ))}
@@ -200,17 +200,17 @@ export function Calendar() {
             return (
               <div
                 key={index}
-                className={`min-h-32 p-2 border-r border-b border-slate-200 last:border-r-0 ${
-                  !day.isCurrentMonth ? 'bg-slate-50' : ''
-                } ${day.isToday ? 'bg-blue-50' : ''}`}
+                className={`min-h-32 p-2 border-r border-b border-slate-200 dark:border-slate-700 last:border-r-0 ${
+                  !day.isCurrentMonth ? 'bg-slate-50 dark:bg-slate-800' : ''
+                } ${day.isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
               >
                 <div
                   className={`text-sm mb-2 ${
                     !day.isCurrentMonth
-                      ? 'text-slate-400'
+                      ? 'text-slate-400 dark:text-gray-500'
                       : day.isToday
                       ? 'font-bold text-primary'
-                      : 'font-medium text-slate-900'
+                      : 'font-medium text-slate-900 dark:text-white'
                   }`}
                 >
                   {day.date.getDate()}
@@ -229,12 +229,12 @@ export function Calendar() {
                         ? 'bg-primary text-white'
                         : session.status === 'in_progress'
                         ? 'bg-amber-600 text-white'
-                        : 'bg-slate-100 text-slate-700';
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-gray-300';
                       
                       return (
                         <div
                           key={session.id}
-                          className={`text-xs px-2 py-1 rounded truncate cursor-pointer transition-all duration-150 border border-slate-200 hover:bg-blue-100 hover:text-blue-900 ${sessionColor} ${day.isToday ? 'font-medium' : ''}`}
+                          className={`text-xs px-2 py-1 rounded truncate cursor-pointer transition-all duration-150 border border-slate-200 dark:border-slate-600 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-900 dark:hover:text-blue-200 ${sessionColor} ${day.isToday ? 'font-medium' : ''}`}
                           title={`${session.startTime} - ${client.name}`}
                           onClick={() => {
                             setSelectedSession(session);
@@ -245,14 +245,14 @@ export function Calendar() {
                           <div className="flex flex-col">
                             <span className="font-semibold">{session.startTime} - {session.endTime || '--'}</span>
                             <span className="truncate">{client.name}</span>
-                            {session.notes && <span className="italic text-slate-200/80">{session.notes.slice(0, 20)}{session.notes.length > 20 ? '...' : ''}</span>}
+                            {session.notes && <span className="italic text-slate-200/80 dark:text-gray-400">{session.notes.slice(0, 20)}{session.notes.length > 20 ? '...' : ''}</span>}
                           </div>
                         </div>
                       );
                     })}
                     
                     {daySessions.length > 3 && (
-                      <div className="text-xs text-slate-500 px-2">
+                      <div className="text-xs text-slate-500 dark:text-gray-400 px-2">
                         +{daySessions.length - 3} more
                       </div>
                     )}
@@ -266,7 +266,7 @@ export function Calendar() {
 
       {/* Loading State */}
       {isLoadingSessions && (
-        <div className="text-center py-8 text-slate-500">
+        <div className="text-center py-8 text-slate-500 dark:text-gray-400">
           <CalendarIcon className="h-8 w-8 mx-auto mb-2 animate-pulse" />
           Loading sessions...
         </div>

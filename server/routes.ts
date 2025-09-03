@@ -119,10 +119,40 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     let cleaned = raw.replace(/```json|```/gi, '').trim();
     // Remove leading/trailing whitespace/newlines
     cleaned = cleaned.replace(/^[\s\r\n]+|[\s\r\n]+$/g, '');
-    // Fix unquoted reps: "reps": 8-12, or "reps": 10-12 per leg, or "reps": 15-20
+    
+    // Fix various unquoted reps patterns
+    // Pattern 1: "reps": 8-12, or "reps": 10-12 per leg, or "reps": 15-20
     cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*per\s*leg)?),/g, (match, p1) => `"reps": "${p1}",`);
     cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*per\s*leg)?)\n/g, (match, p1) => `"reps": "${p1}"\n`);
     cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:-[0-9]+)?(?:\s*per\s*leg)?)\s*}/g, (match, p1) => `"reps": "${p1}"}`);
+    
+    // Pattern 2: Handle units like "2000m", "30 minutes", "45 seconds"
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:\.[0-9]+)?(?:m|km|minutes?|mins?|seconds?|secs?|hours?|hrs?)),/g, (match, p1) => `"reps": "${p1}",`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:\.[0-9]+)?(?:m|km|minutes?|mins?|seconds?|secs?|hours?|hrs?))\n/g, (match, p1) => `"reps": "${p1}"\n`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:\.[0-9]+)?(?:m|km|minutes?|mins?|seconds?|secs?|hours?|hrs?))\s*}/g, (match, p1) => `"reps": "${p1}"}`);
+    
+    // Pattern 3: Handle Spanish units
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:\.[0-9]+)?(?:\s*(?:minutos?|segundos?|horas?))),/g, (match, p1) => `"reps": "${p1.trim()}",`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:\.[0-9]+)?(?:\s*(?:minutos?|segundos?|horas?)))\n/g, (match, p1) => `"reps": "${p1.trim()}"\n`);
+    cleaned = cleaned.replace(/"reps":\s*([0-9]+(?:\.[0-9]+)?(?:\s*(?:minutos?|segundos?|horas?)))\s*}/g, (match, p1) => `"reps": "${p1.trim()}"}`);
+    
+    // Pattern 4: Handle "repeticiones" field as well
+    cleaned = cleaned.replace(/"repeticiones":\s*([0-9]+(?:-[0-9]+)?(?:\s*(?:per\s*leg|por\s*pierna)?)),/g, (match, p1) => `"repeticiones": "${p1.trim()}",`);
+    cleaned = cleaned.replace(/"repeticiones":\s*([0-9]+(?:-[0-9]+)?(?:\s*(?:per\s*leg|por\s*pierna)?))(\n|\s*})/g, (match, p1, ending) => `"repeticiones": "${p1.trim()}"${ending}`);
+    
+    // Pattern 5: Handle "Máximo" or "Maximum" values
+    cleaned = cleaned.replace(/"reps":\s*(Máximo|Maximum),/gi, (match, p1) => `"reps": "${p1}",`);
+    cleaned = cleaned.replace(/"reps":\s*(Máximo|Maximum)(\n|\s*})/gi, (match, p1, ending) => `"reps": "${p1}"${ending}`);
+    cleaned = cleaned.replace(/"repeticiones":\s*(Máximo|Maximum),/gi, (match, p1) => `"repeticiones": "${p1}",`);
+    cleaned = cleaned.replace(/"repeticiones":\s*(Máximo|Maximum)(\n|\s*})/gi, (match, p1, ending) => `"repeticiones": "${p1}"${ending}`);
+    
+    // Pattern 6: Handle special text values like "as_many_as_possible", "until_failure"
+    cleaned = cleaned.replace(/"reps":\s*(as_many_as_possible|until_failure|failure|max|to_failure),/gi, (match, p1) => `"reps": "${p1.replace(/_/g, ' ')}",`);
+    cleaned = cleaned.replace(/"reps":\s*(as_many_as_possible|until_failure|failure|max|to_failure)(\n|\s*})/gi, (match, p1, ending) => `"reps": "${p1.replace(/_/g, ' ')}"${ending}`);
+    
+    // Fix trailing commas
+    cleaned = cleaned.replace(/,(\s*[\]}])/g, '$1');
+    
     return cleaned;
   }
 
@@ -169,8 +199,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         console.error('Failed to parse Gemini response:', text);
         planJson = { error: 'Failed to parse Gemini response as JSON', raw: text };
       }
-      // Compose InsertWorkoutPlan
-      const planData = {
+      // Don't auto-save the plan - just return it for preview
+      // The frontend will save it when user clicks "Save Plan"
+      const planResponse = {
         clientId,
         name: `AI Plan for ${client.name}`,
         description: `AI-generated plan (${duration}, ${focus})`,
@@ -179,8 +210,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         plan: planJson,
         isActive: true,
       };
-      const savedPlan = await storage.createWorkoutPlan(planData);
-      res.status(201).json(savedPlan);
+      res.status(201).json(planResponse);
     } catch (error: any) {
       res.status(500).json({ message: `Gemini API error: ${error?.message || error}` });
     }

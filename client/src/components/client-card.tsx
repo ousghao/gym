@@ -48,13 +48,13 @@ export function ClientCard({ client, onView, onEdit, onGenerateWorkout, onLogWor
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow rounded-2xl border border-slate-100 bg-white flex flex-col h-full relative overflow-visible">
+    <Card className="hover:shadow-lg transition-shadow rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col h-full relative overflow-visible">
       {/* Three-dots menu in top right */}
       <div className="absolute top-4 right-4 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100">
-              <MoreVertical className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-700">
+              <MoreVertical className="h-5 w-5 text-slate-600 dark:text-white" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -71,17 +71,17 @@ export function ClientCard({ client, onView, onEdit, onGenerateWorkout, onLogWor
       <CardContent className="p-6 flex flex-col h-full items-center">
         {/* Avatar and Name */}
         <div className="flex flex-col items-center gap-2 mb-4 w-full">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shadow-md bg-gradient-to-br from-primary/10 to-blue-100 mb-1`}>
-            <span>{getInitials(client.name)}</span>
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shadow-md bg-gradient-to-br from-primary/10 to-blue-100 dark:from-primary/20 dark:to-blue-900/30 mb-1`}>
+            <span className="text-slate-900 dark:text-white">{getInitials(client.name)}</span>
           </div>
-          <h3 className="font-semibold text-slate-900 text-lg leading-tight text-center break-words max-w-[180px]">{client.name}</h3>
-          <p className="text-xs text-slate-500 text-center">{client.age} years old</p>
+          <h3 className="font-semibold text-slate-900 dark:text-white text-lg leading-tight text-center break-words max-w-[180px]">{client.name}</h3>
+          <p className="text-xs text-slate-500 dark:text-gray-400 text-center">{client.age} years old</p>
         </div>
         {/* Info Section */}
         <div className="space-y-2 mb-4 w-full">
           <div className="flex justify-between text-sm w-full">
-            <span className="text-slate-600">{t('client.goal')}:</span>
-            <span className="font-medium text-slate-900 text-right">
+            <span className="text-slate-600 dark:text-gray-300">{t('client.goal')}:</span>
+            <span className="font-medium text-slate-900 dark:text-white text-right">
               {client.goal === 'weight_loss' && t('goals.weight_loss')}
               {client.goal === 'muscle_gain' && t('goals.muscle_gain')}
               {client.goal === 'endurance' && t('goals.endurance')}
@@ -90,16 +90,16 @@ export function ClientCard({ client, onView, onEdit, onGenerateWorkout, onLogWor
             </span>
           </div>
           <div className="flex justify-between text-sm w-full">
-            <span className="text-slate-600">{t('client.experience')}:</span>
-            <span className="font-medium text-slate-900 text-right">
+            <span className="text-slate-600 dark:text-gray-300">{t('client.experience')}:</span>
+            <span className="font-medium text-slate-900 dark:text-white text-right">
               {client.experience === 'beginner' && t('experience.beginner')}
               {client.experience === 'intermediate' && t('experience.intermediate')}
               {client.experience === 'advanced' && t('experience.advanced')}
             </span>
           </div>
           <div className="flex justify-between text-sm w-full">
-            <span className="text-slate-600">{t('client.available_days')}:</span>
-            <span className="font-medium text-slate-900 text-right truncate max-w-[120px] sm:max-w-none">{client.availableDays.join(', ')}</span>
+            <span className="text-slate-600 dark:text-gray-300">{t('client.available_days')}:</span>
+            <span className="font-medium text-slate-900 dark:text-white text-right truncate max-w-[120px] sm:max-w-none">{client.availableDays.join(', ')}</span>
           </div>
         </div>
         {/* Actions */}
@@ -115,19 +115,19 @@ export function ClientCard({ client, onView, onEdit, onGenerateWorkout, onLogWor
               variant="outline" 
               size="icon"
               onClick={() => onGenerateWorkout(client.id)}
-              className="shrink-0 hover:bg-blue-50"
+              className="shrink-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-slate-200 dark:border-slate-600"
               title={t('actions.generate_ai_plan')}
             >
-              <Bot className="h-5 w-5" />
+              <Bot className="h-5 w-5 text-slate-600 dark:text-white" />
             </Button>
             <Button 
               variant="outline" 
               size="icon"
               onClick={() => onLogWorkout(client.id)}
-              className="shrink-0 hover:bg-emerald-50"
+              className="shrink-0 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border-slate-200 dark:border-slate-600"
               title={t('actions.log_workout')}
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-5 w-5 text-slate-600 dark:text-white" />
             </Button>
           </div>
         </div>

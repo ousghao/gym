@@ -32,23 +32,23 @@
 
 .dark {
   --background: 224 71% 4%; /* #0F0F23 */
-  --foreground: 213 31% 91%; /* #E2E8F0 */
+  --foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
   --muted: 223 47% 11%; /* #1E293B */
-  --muted-foreground: 215 20% 65%; /* #94A3B8 */
+  --muted-foreground: 0 0% 95%; /* #F2F2F2 - Near white for muted text */
   --popover: 224 71% 4%; /* #0F0F23 */
-  --popover-foreground: 213 31% 91%; /* #E2E8F0 */
-  --card: 224 71% 4%; /* #0F0F23 */
-  --card-foreground: 213 31% 91%; /* #E2E8F0 */
+  --popover-foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
+  --card: 223 47% 11%; /* #1E293B - Slightly lighter card background */
+  --card-foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
   --border: 216 34% 17%; /* #1E293B */
   --input: 216 34% 17%; /* #1E293B */
   --primary: 217 91% 60%; /* #3B82F6 */
-  --primary-foreground: 210 40% 98%; /* #F8FAFC */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
   --secondary: 222 84% 5%; /* #0F172A */
-  --secondary-foreground: 210 40% 98%; /* #F8FAFC */
+  --secondary-foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
   --accent: 216 34% 17%; /* #1E293B */
-  --accent-foreground: 210 40% 98%; /* #F8FAFC */
-  --destructive: 0 63% 31%; /* #991B1B */
-  --destructive-foreground: 210 40% 98%; /* #F8FAFC */
+  --accent-foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
+  --destructive: 0 84% 60%; /* #EF4444 - Brighter red for better visibility */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF - Pure white text */
   --ring: 216 34% 17%; /* #1E293B */
   --chart-1: 220 70% 50%; /* #2563EB */
   --chart-2: 160 60% 45%; /* #059669 */
@@ -83,5 +83,48 @@
   
   .gradient-primary {
     @apply bg-gradient-to-r from-primary to-blue-700;
+  }
+}
+
+/* Dark mode specific improvements */
+@layer utilities {
+  .dark .text-slate-900 {
+    @apply text-white;
+  }
+  
+  .dark .text-slate-700 {
+    @apply text-gray-100;
+  }
+  
+  .dark .text-slate-600 {
+    @apply text-gray-200;
+  }
+  
+  .dark .text-gray-600 {
+    @apply text-gray-200;
+  }
+  
+  .dark .text-gray-500 {
+    @apply text-gray-300;
+  }
+  
+  /* Ensure all headings are white in dark mode */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    @apply text-white;
+  }
+  
+  /* Ensure all paragraphs are white in dark mode */
+  .dark p {
+    @apply text-white;
+  }
+  
+  /* Ensure all spans are white in dark mode */
+  .dark span {
+    @apply text-white;
+  }
+  
+  /* Ensure icons are white in dark mode */
+  .dark svg {
+    @apply text-white;
   }
 }
